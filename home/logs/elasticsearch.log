@@ -1,0 +1,126 @@
+[2019-04-15T21:42:31,337][INFO ][o.e.n.Node               ] [] initializing ...
+[2019-04-15T21:42:31,998][INFO ][o.e.e.NodeEnvironment    ] [K91whsL] using [1] data paths, mounts [[软件 (D:)]], net usable_space [83.1gb], net total_space [100gb], types [NTFS]
+[2019-04-15T21:42:31,998][INFO ][o.e.e.NodeEnvironment    ] [K91whsL] heap size [3.9gb], compressed ordinary object pointers [true]
+[2019-04-15T21:42:32,001][INFO ][o.e.n.Node               ] [K91whsL] node name derived from node ID [K91whsLyRdu3z6Nlr0Oh-Q]; set [node.name] to override
+[2019-04-15T21:42:32,001][INFO ][o.e.n.Node               ] [K91whsL] version[6.3.2-SNAPSHOT], pid[11848], build[unknown/unknown/Unknown/Unknown], OS[Windows 10/10.0/amd64], JVM["Oracle Corporation"/Java HotSpot(TM) 64-Bit Server VM/10.0.2/10.0.2+13]
+[2019-04-15T21:42:32,001][INFO ][o.e.n.Node               ] [K91whsL] JVM arguments [-Dvisualvm.id=108501944471770, -Des.path.conf=D:\elasticsearch-6.3.2\home\config, -Des.path.home=D:\elasticsearch-6.3.2\home, -Dlog4j2.disable.jmx=true, -Djava.security.policy=D:\elasticsearch-6.3.2\home\config\java.policy, -javaagent:D:\IntelliJ IDEA 2018.3.6\lib\idea_rt.jar=57652:D:\IntelliJ IDEA 2018.3.6\bin, -Dfile.encoding=UTF-8]
+[2019-04-15T21:42:32,002][WARN ][o.e.n.Node               ] [K91whsL] version [6.3.2-SNAPSHOT] is a pre-release version of Elasticsearch and is not suitable for production
+[2019-04-15T21:42:32,696][ERROR][o.e.b.Bootstrap          ] Exception
+java.security.AccessControlException: access denied ("java.lang.RuntimePermission" "createClassLoader")
+	at java.security.AccessControlContext.checkPermission(AccessControlContext.java:472) ~[?:?]
+	at java.security.AccessController.checkPermission(AccessController.java:895) ~[?:?]
+	at java.lang.SecurityManager.checkPermission(SecurityManager.java:335) ~[?:?]
+	at java.lang.SecurityManager.checkCreateClassLoader(SecurityManager.java:397) ~[?:?]
+	at java.lang.ClassLoader.checkCreateClassLoader(ClassLoader.java:365) ~[?:?]
+	at java.lang.ClassLoader.checkCreateClassLoader(ClassLoader.java:355) ~[?:?]
+	at java.lang.ClassLoader.<init>(ClassLoader.java:434) ~[?:?]
+	at org.elasticsearch.plugins.ExtendedPluginsClassLoader.<init>(ExtendedPluginsClassLoader.java:36) ~[main/:?]
+	at org.elasticsearch.plugins.ExtendedPluginsClassLoader.lambda$create$0(ExtendedPluginsClassLoader.java:57) ~[main/:?]
+	at java.security.AccessController.doPrivileged(Native Method) ~[?:?]
+	at org.elasticsearch.plugins.ExtendedPluginsClassLoader.create(ExtendedPluginsClassLoader.java:56) ~[main/:?]
+	at org.elasticsearch.plugins.PluginLoaderIndirection.createLoader(PluginLoaderIndirection.java:31) ~[main/:?]
+	at org.elasticsearch.plugins.PluginsService.loadBundle(PluginsService.java:632) ~[main/:?]
+	at org.elasticsearch.plugins.PluginsService.loadBundles(PluginsService.java:557) ~[main/:?]
+	at org.elasticsearch.plugins.PluginsService.<init>(PluginsService.java:162) ~[main/:?]
+	at org.elasticsearch.node.Node.<init>(Node.java:311) ~[main/:?]
+	at org.elasticsearch.node.Node.<init>(Node.java:252) ~[main/:?]
+	at org.elasticsearch.bootstrap.Bootstrap$5.<init>(Bootstrap.java:213) ~[main/:?]
+	at org.elasticsearch.bootstrap.Bootstrap.setup(Bootstrap.java:213) ~[main/:?]
+	at org.elasticsearch.bootstrap.Bootstrap.init(Bootstrap.java:326) [main/:?]
+	at org.elasticsearch.bootstrap.Elasticsearch.init(Elasticsearch.java:136) [main/:?]
+	at org.elasticsearch.bootstrap.Elasticsearch.execute(Elasticsearch.java:127) [main/:?]
+	at org.elasticsearch.cli.EnvironmentAwareCommand.execute(EnvironmentAwareCommand.java:86) [main/:?]
+	at org.elasticsearch.cli.Command.mainWithoutErrorHandling(Command.java:124) [main/:?]
+	at org.elasticsearch.cli.Command.main(Command.java:90) [main/:?]
+	at org.elasticsearch.bootstrap.Elasticsearch.main(Elasticsearch.java:93) [main/:?]
+	at org.elasticsearch.bootstrap.Elasticsearch.main(Elasticsearch.java:86) [main/:?]
+[2019-04-15T21:42:32,705][WARN ][o.e.b.ElasticsearchUncaughtExceptionHandler] [] uncaught exception in thread [main]
+org.elasticsearch.bootstrap.StartupException: java.security.AccessControlException: access denied ("java.lang.RuntimePermission" "createClassLoader")
+	at org.elasticsearch.bootstrap.Elasticsearch.init(Elasticsearch.java:140) ~[main/:?]
+	at org.elasticsearch.bootstrap.Elasticsearch.execute(Elasticsearch.java:127) ~[main/:?]
+	at org.elasticsearch.cli.EnvironmentAwareCommand.execute(EnvironmentAwareCommand.java:86) ~[main/:?]
+	at org.elasticsearch.cli.Command.mainWithoutErrorHandling(Command.java:124) ~[main/:?]
+	at org.elasticsearch.cli.Command.main(Command.java:90) ~[main/:?]
+	at org.elasticsearch.bootstrap.Elasticsearch.main(Elasticsearch.java:93) ~[main/:?]
+	at org.elasticsearch.bootstrap.Elasticsearch.main(Elasticsearch.java:86) ~[main/:?]
+Caused by: java.security.AccessControlException: access denied ("java.lang.RuntimePermission" "createClassLoader")
+	at java.security.AccessControlContext.checkPermission(AccessControlContext.java:472) ~[?:?]
+	at java.security.AccessController.checkPermission(AccessController.java:895) ~[?:?]
+	at java.lang.SecurityManager.checkPermission(SecurityManager.java:335) ~[?:?]
+	at java.lang.SecurityManager.checkCreateClassLoader(SecurityManager.java:397) ~[?:?]
+	at java.lang.ClassLoader.checkCreateClassLoader(ClassLoader.java:365) ~[?:?]
+	at java.lang.ClassLoader.checkCreateClassLoader(ClassLoader.java:355) ~[?:?]
+	at java.lang.ClassLoader.<init>(ClassLoader.java:434) ~[?:?]
+	at org.elasticsearch.plugins.ExtendedPluginsClassLoader.<init>(ExtendedPluginsClassLoader.java:36) ~[main/:?]
+	at org.elasticsearch.plugins.ExtendedPluginsClassLoader.lambda$create$0(ExtendedPluginsClassLoader.java:57) ~[main/:?]
+	at java.security.AccessController.doPrivileged(Native Method) ~[?:?]
+	at org.elasticsearch.plugins.ExtendedPluginsClassLoader.create(ExtendedPluginsClassLoader.java:56) ~[main/:?]
+	at org.elasticsearch.plugins.PluginLoaderIndirection.createLoader(PluginLoaderIndirection.java:31) ~[main/:?]
+	at org.elasticsearch.plugins.PluginsService.loadBundle(PluginsService.java:632) ~[main/:?]
+	at org.elasticsearch.plugins.PluginsService.loadBundles(PluginsService.java:557) ~[main/:?]
+	at org.elasticsearch.plugins.PluginsService.<init>(PluginsService.java:162) ~[main/:?]
+	at org.elasticsearch.node.Node.<init>(Node.java:311) ~[main/:?]
+	at org.elasticsearch.node.Node.<init>(Node.java:252) ~[main/:?]
+	at org.elasticsearch.bootstrap.Bootstrap$5.<init>(Bootstrap.java:213) ~[main/:?]
+	at org.elasticsearch.bootstrap.Bootstrap.setup(Bootstrap.java:213) ~[main/:?]
+	at org.elasticsearch.bootstrap.Bootstrap.init(Bootstrap.java:326) ~[main/:?]
+	at org.elasticsearch.bootstrap.Elasticsearch.init(Elasticsearch.java:136) ~[main/:?]
+	... 6 more
+[2019-04-15T21:43:59,677][INFO ][o.e.n.Node               ] [] initializing ...
+[2019-04-15T21:43:59,737][INFO ][o.e.e.NodeEnvironment    ] [K91whsL] using [1] data paths, mounts [[软件 (D:)]], net usable_space [83.1gb], net total_space [100gb], types [NTFS]
+[2019-04-15T21:43:59,737][INFO ][o.e.e.NodeEnvironment    ] [K91whsL] heap size [3.9gb], compressed ordinary object pointers [true]
+[2019-04-15T21:43:59,739][INFO ][o.e.n.Node               ] [K91whsL] node name derived from node ID [K91whsLyRdu3z6Nlr0Oh-Q]; set [node.name] to override
+[2019-04-15T21:43:59,740][INFO ][o.e.n.Node               ] [K91whsL] version[6.3.2-SNAPSHOT], pid[9092], build[unknown/unknown/Unknown/Unknown], OS[Windows 10/10.0/amd64], JVM["Oracle Corporation"/Java HotSpot(TM) 64-Bit Server VM/10.0.2/10.0.2+13]
+[2019-04-15T21:43:59,740][INFO ][o.e.n.Node               ] [K91whsL] JVM arguments [-Dvisualvm.id=108590526982847, -Des.path.conf=D:\elasticsearch-6.3.2\home\config, -Des.path.home=D:\elasticsearch-6.3.2\home, -Dlog4j2.disable.jmx=true, -Djava.security.policy=D:\elasticsearch-6.3.2\home\config\java.policy, -javaagent:D:\IntelliJ IDEA 2018.3.6\lib\idea_rt.jar=57717:D:\IntelliJ IDEA 2018.3.6\bin, -Dfile.encoding=UTF-8]
+[2019-04-15T21:43:59,740][WARN ][o.e.n.Node               ] [K91whsL] version [6.3.2-SNAPSHOT] is a pre-release version of Elasticsearch and is not suitable for production
+[2019-04-15T21:44:13,075][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [aggs-matrix-stats]
+[2019-04-15T21:44:13,075][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [analysis-common]
+[2019-04-15T21:44:13,075][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [ingest-common]
+[2019-04-15T21:44:13,075][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [lang-expression]
+[2019-04-15T21:44:13,075][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [lang-mustache]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [lang-painless]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [mapper-extras]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [parent-join]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [percolator]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [rank-eval]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [reindex]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [repository-url]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [transport-netty4]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [tribe]
+[2019-04-15T21:44:13,076][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-core]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-deprecation]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-graph]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-logstash]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-ml]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-monitoring]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-rollup]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-security]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-sql]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-upgrade]
+[2019-04-15T21:44:13,077][INFO ][o.e.p.PluginsService     ] [K91whsL] loaded module [x-pack-watcher]
+[2019-04-15T21:44:13,078][INFO ][o.e.p.PluginsService     ] [K91whsL] no plugins loaded
+[2019-04-15T21:44:14,196][INFO ][i.n.u.i.PlatformDependent] Your platform does not provide complete low-level API for accessing direct buffers reliably. Unless explicitly requested, heap buffer will always be preferred to avoid potential system instability.
+[2019-04-15T21:44:16,958][INFO ][o.e.x.s.a.s.FileRolesStore] [K91whsL] parsed [0] roles from file [D:\elasticsearch-6.3.2\home\config\roles.yml]
+[2019-04-15T21:44:17,597][INFO ][o.e.x.m.j.p.l.CppLogMessageHandler] [controller/9892] [Main.cc@109] controller (64 bit): Version 6.3.2 (Build 903094f295d249) Copyright (c) 2018 Elasticsearch BV
+[2019-04-15T21:44:18,067][DEBUG][o.e.a.ActionModule       ] Using REST wrapper from plugin org.elasticsearch.xpack.security.Security
+[2019-04-15T21:44:18,270][INFO ][i.n.u.i.PlatformDependent] Your platform does not provide complete low-level API for accessing direct buffers reliably. Unless explicitly requested, heap buffer will always be preferred to avoid potential system instability.
+[2019-04-15T21:44:18,298][INFO ][o.e.d.DiscoveryModule    ] [K91whsL] using discovery type [zen]
+[2019-04-15T21:44:19,060][INFO ][o.e.n.Node               ] [K91whsL] initialized
+[2019-04-15T21:44:19,060][INFO ][o.e.n.Node               ] [K91whsL] starting ...
+[2019-04-15T21:44:20,854][INFO ][o.e.t.TransportService   ] [K91whsL] publish_address {127.0.0.1:9300}, bound_addresses {127.0.0.1:9300}, {[::1]:9300}
+[2019-04-15T21:44:20,869][WARN ][o.e.b.BootstrapChecks    ] [K91whsL] initial heap size [268435456] not equal to maximum heap size [4282384384]; this can cause resize pauses and prevents mlockall from locking the entire heap
+[2019-04-15T21:44:23,918][INFO ][o.e.c.s.MasterService    ] [K91whsL] zen-disco-elected-as-master ([0] nodes joined)[, ], reason: new_master {K91whsL}{K91whsLyRdu3z6Nlr0Oh-Q}{A7nzd9r6QTqxPOW3z_bh7g}{127.0.0.1}{127.0.0.1:9300}{ml.machine_memory=17124929536, xpack.installed=true, ml.max_open_jobs=20, ml.enabled=true}
+[2019-04-15T21:44:23,922][INFO ][o.e.c.s.ClusterApplierService] [K91whsL] new_master {K91whsL}{K91whsLyRdu3z6Nlr0Oh-Q}{A7nzd9r6QTqxPOW3z_bh7g}{127.0.0.1}{127.0.0.1:9300}{ml.machine_memory=17124929536, xpack.installed=true, ml.max_open_jobs=20, ml.enabled=true}, reason: apply cluster state (from master [master {K91whsL}{K91whsLyRdu3z6Nlr0Oh-Q}{A7nzd9r6QTqxPOW3z_bh7g}{127.0.0.1}{127.0.0.1:9300}{ml.machine_memory=17124929536, xpack.installed=true, ml.max_open_jobs=20, ml.enabled=true} committed version [1] source [zen-disco-elected-as-master ([0] nodes joined)[, ]]])
+[2019-04-15T21:44:23,977][WARN ][o.e.x.s.a.s.m.NativeRoleMappingStore] [K91whsL] Failed to clear cache for realms [[]]
+[2019-04-15T21:44:24,027][INFO ][o.e.g.GatewayService     ] [K91whsL] recovered [0] indices into cluster_state
+[2019-04-15T21:44:24,159][INFO ][o.e.c.m.MetaDataIndexTemplateService] [K91whsL] adding template [.triggered_watches] for index patterns [.triggered_watches*]
+[2019-04-15T21:44:24,204][INFO ][o.e.c.m.MetaDataIndexTemplateService] [K91whsL] adding template [.watch-history-7] for index patterns [.watcher-history-7*]
+[2019-04-15T21:44:24,229][INFO ][o.e.c.m.MetaDataIndexTemplateService] [K91whsL] adding template [.watches] for index patterns [.watches*]
+[2019-04-15T21:44:24,263][INFO ][o.e.c.m.MetaDataIndexTemplateService] [K91whsL] adding template [.monitoring-logstash] for index patterns [.monitoring-logstash-6-*]
+[2019-04-15T21:44:24,300][INFO ][o.e.c.m.MetaDataIndexTemplateService] [K91whsL] adding template [.monitoring-es] for index patterns [.monitoring-es-6-*]
+[2019-04-15T21:44:24,326][INFO ][o.e.c.m.MetaDataIndexTemplateService] [K91whsL] adding template [.monitoring-alerts] for index patterns [.monitoring-alerts-6]
+[2019-04-15T21:44:24,350][INFO ][o.e.c.m.MetaDataIndexTemplateService] [K91whsL] adding template [.monitoring-beats] for index patterns [.monitoring-beats-6-*]
+[2019-04-15T21:44:24,376][INFO ][o.e.c.m.MetaDataIndexTemplateService] [K91whsL] adding template [.monitoring-kibana] for index patterns [.monitoring-kibana-6-*]
+[2019-04-15T21:44:24,421][INFO ][o.e.l.LicenseService     ] [K91whsL] license [6df45592-a304-41a5-8a79-835d4dc902a6] mode [basic] - valid
+[2019-04-15T21:44:24,926][INFO ][o.e.x.s.t.n.SecurityNetty4HttpServerTransport] [K91whsL] publish_address {127.0.0.1:9200}, bound_addresses {127.0.0.1:9200}, {[::1]:9200}
+[2019-04-15T21:44:24,927][INFO ][o.e.n.Node               ] [K91whsL] started
