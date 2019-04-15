@@ -41,13 +41,17 @@ import java.util.Arrays;
 import java.util.Locale;
 
 /**
+ * 基于ElasticSearch v6.3.2
+ *
+ * 源码编译参考博客：https://blog.csdn.net/wwwdc1012/article/details/81978966
+ *
  * JVM启动参数
  * -Des.path.conf=D:\elasticsearch-6.3.2\home\config
  * -Des.path.home=D:\elasticsearch-6.3.2\home
  * -Dlog4j2.disable.jmx=true
  * -Djava.security.policy=D:\elasticsearch-6.3.2\home\config\java.policy
  *
- * 
+ *
  *
  * This class starts elasticsearch.
  */
@@ -156,4 +160,11 @@ class Elasticsearch extends EnvironmentAwareCommand {
      *
      * http://commons.apache.org/proper/commons-daemon/procrun.html
      *
- 
+     * NOTE: If this method is renamed and/or moved, make sure to
+     * update elasticsearch-service.bat!
+     */
+    static void close(String[] args) throws IOException {
+        Bootstrap.stop();
+    }
+
+}
