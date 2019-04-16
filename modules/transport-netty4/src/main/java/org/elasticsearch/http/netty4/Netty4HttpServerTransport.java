@@ -150,7 +150,6 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
         byteSizeSetting("http.netty.receive_predictor_max", SETTING_HTTP_NETTY_RECEIVE_PREDICTOR_SIZE,
             Property.NodeScope, Property.Deprecated);
 
-
     protected final NetworkService networkService;
     protected final BigArrays bigArrays;
 
@@ -204,7 +203,6 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
 
     // package private for testing
     Netty4OpenChannelsHandler serverOpenChannels;
-
 
     private final Netty4CorsConfig corsConfig;
 
@@ -264,8 +262,8 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
         if (maxContentLength.getBytes() > Integer.MAX_VALUE) {
             logger.warn("maxContentLength[{}] set to high value, resetting it to [100mb]", maxContentLength);
             deprecationLogger.deprecated(
-                    "out of bounds max content length value [{}] will no longer be truncated to [100mb], you must enter a valid setting",
-                    maxContentLength.getStringRep());
+                "out of bounds max content length value [{}] will no longer be truncated to [100mb], you must enter a valid setting",
+                maxContentLength.getStringRep());
             maxContentLength = new ByteSizeValue(100, ByteSizeUnit.MB);
         }
         this.maxContentLength = maxContentLength;
@@ -427,7 +425,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
                 synchronized (serverChannels) {
                     ChannelFuture future = serverBootstrap.bind(new InetSocketAddress(hostAddress, portNumber)).sync();
                     serverChannels.add(future.channel());
-                    boundSocket.set((InetSocketAddress) future.channel().localAddress());
+                    boundSocket.set((InetSocketAddress)future.channel().localAddress());
                 }
             } catch (Exception e) {
                 lastException.set(e);
@@ -497,6 +495,12 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
         return corsConfig;
     }
 
+    /**
+     * 处理正常的Http请求
+     *
+     * @param request
+     * @param channel
+     */
     void dispatchRequest(final RestRequest request, final RestChannel channel) {
         final ThreadContext threadContext = threadPool.getThreadContext();
         try (ThreadContext.StoredContext ignore = threadContext.stashContext()) {
@@ -524,13 +528,13 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
             }
             if (!NetworkExceptionHelper.isCloseConnectionException(cause)) {
                 logger.warn(
-                    (Supplier<?>) () -> new ParameterizedMessage(
+                    (Supplier<?>)() -> new ParameterizedMessage(
                         "caught exception while handling client http traffic, closing connection {}", ctx.channel()),
                     cause);
                 ctx.channel().close();
             } else {
                 logger.debug(
-                    (Supplier<?>) () -> new ParameterizedMessage(
+                    (Supplier<?>)() -> new ParameterizedMessage(
                         "caught exception while handling client http traffic, closing connection {}", ctx.channel()),
                     cause);
                 ctx.channel().close();
@@ -548,9 +552,9 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
         private final Netty4HttpRequestHandler requestHandler;
 
         protected HttpChannelHandler(
-                final Netty4HttpServerTransport transport,
-                final boolean detailedErrorsEnabled,
-                final ThreadContext threadContext) {
+            final Netty4HttpServerTransport transport,
+            final boolean detailedErrorsEnabled,
+            final ThreadContext threadContext) {
             this.transport = transport;
             this.requestHandler = new Netty4HttpRequestHandler(transport, detailedErrorsEnabled, threadContext);
         }

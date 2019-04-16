@@ -51,6 +51,8 @@ import java.util.Locale;
  * -Dlog4j2.disable.jmx=true
  * -Djava.security.policy=D:\elasticsearch-6.3.2\home\config\java.policy
  *
+ * {@link Netty4HttpRequestHandler} Netty处理Http请求的Handler
+ *
  *
  *
  * This class starts elasticsearch.

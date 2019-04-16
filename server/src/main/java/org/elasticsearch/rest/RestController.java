@@ -61,6 +61,9 @@ import static org.elasticsearch.rest.RestStatus.NOT_ACCEPTABLE;
 import static org.elasticsearch.rest.RestStatus.OK;
 import static org.elasticsearch.rest.BytesRestResponse.TEXT_CONTENT_TYPE;
 
+/**
+ * 处理Http请求的Controller
+ */
 public class RestController extends AbstractComponent implements HttpServerTransport.Dispatcher {
 
     private final PathTrie<MethodHandlers> handlers = new PathTrie<>(RestUtils.REST_DECODER);
@@ -71,12 +74,14 @@ public class RestController extends AbstractComponent implements HttpServerTrans
 
     private final CircuitBreakerService circuitBreakerService;
 
-    /** Rest headers that are copied to internal requests made during a rest request. */
+    /**
+     * Rest headers that are copied to internal requests made during a rest request.
+     */
     private final Set<String> headersToCopy;
     private UsageService usageService;
 
     public RestController(Settings settings, Set<String> headersToCopy, UnaryOperator<RestHandler> handlerWrapper,
-            NodeClient client, CircuitBreakerService circuitBreakerService, UsageService usageService) {
+                          NodeClient client, CircuitBreakerService circuitBreakerService, UsageService usageService) {
         super(settings);
         this.headersToCopy = headersToCopy;
         this.usageService = usageService;
@@ -91,11 +96,11 @@ public class RestController extends AbstractComponent implements HttpServerTrans
     /**
      * Registers a REST handler to be executed when the provided {@code method} and {@code path} match the request.
      *
-     * @param method GET, POST, etc.
-     * @param path Path to handle (e.g., "/{index}/{type}/_bulk")
-     * @param handler The handler to actually execute
+     * @param method             GET, POST, etc.
+     * @param path               Path to handle (e.g., "/{index}/{type}/_bulk")
+     * @param handler            The handler to actually execute
      * @param deprecationMessage The message to log and send as a header in the response
-     * @param logger The existing deprecation logger to use
+     * @param logger             The existing deprecation logger to use
      */
     public void registerAsDeprecatedHandler(RestRequest.Method method, String path, RestHandler handler,
                                             String deprecationMessage, DeprecationLogger logger) {
@@ -122,12 +127,12 @@ public class RestController extends AbstractComponent implements HttpServerTrans
      * Deprecated REST handlers without a direct replacement should be deprecated directly using {@link #registerAsDeprecatedHandler}
      * and a specific message.
      *
-     * @param method GET, POST, etc.
-     * @param path Path to handle (e.g., "/_forcemerge")
-     * @param handler The handler to actually execute
+     * @param method           GET, POST, etc.
+     * @param path             Path to handle (e.g., "/_forcemerge")
+     * @param handler          The handler to actually execute
      * @param deprecatedMethod GET, POST, etc.
-     * @param deprecatedPath <em>Deprecated</em> path to handle (e.g., "/_optimize")
-     * @param logger The existing deprecation logger to use
+     * @param deprecatedPath   <em>Deprecated</em> path to handle (e.g., "/_optimize")
+     * @param logger           The existing deprecation logger to use
      */
     public void registerWithDeprecatedHandler(RestRequest.Method method, String path, RestHandler handler,
                                               RestRequest.Method deprecatedMethod, String deprecatedPath,
@@ -143,13 +148,13 @@ public class RestController extends AbstractComponent implements HttpServerTrans
     /**
      * Registers a REST handler to be executed when one of the provided methods and path match the request.
      *
-     * @param path Path to handle (e.g., "/{index}/{type}/_bulk")
+     * @param path    Path to handle (e.g., "/{index}/{type}/_bulk")
      * @param handler The handler to actually execute
-     * @param method GET, POST, etc.
+     * @param method  GET, POST, etc.
      */
     public void registerHandler(RestRequest.Method method, String path, RestHandler handler) {
         if (handler instanceof BaseRestHandler) {
-            usageService.addRestHandler((BaseRestHandler) handler);
+            usageService.addRestHandler((BaseRestHandler)handler);
         }
         handlers.insertOrUpdate(path, new MethodHandlers(path, handler, method), (mHandlers, newMHandler) -> {
             return mHandlers.addMethods(handler, method);
@@ -190,7 +195,7 @@ public class RestController extends AbstractComponent implements HttpServerTrans
             if (cause == null) {
                 e = new ElasticsearchException("unknown cause");
             } else if (cause instanceof Exception) {
-                e = (Exception) cause;
+                e = (Exception)cause;
             } else {
                 e = new ElasticsearchException(cause);
             }
@@ -300,6 +305,7 @@ public class RestController extends AbstractComponent implements HttpServerTrans
 
     /**
      * Checks the request parameters against enabled settings for error trace support
+     *
      * @return true if the request does not have any parameters that conflict with system settings
      */
     boolean checkErrorTraceParameter(final RestRequest request, final RestChannel channel) {
@@ -324,7 +330,7 @@ public class RestController extends AbstractComponent implements HttpServerTrans
 
         if (checkErrorTraceParameter(request, channel) == false) {
             channel.sendResponse(
-                    BytesRestResponse.createSimpleErrorResponse(channel, BAD_REQUEST, "error traces in responses are disabled."));
+                BytesRestResponse.createSimpleErrorResponse(channel, BAD_REQUEST, "error traces in responses are disabled."));
             return;
         }
 
@@ -449,6 +455,7 @@ public class RestController extends AbstractComponent implements HttpServerTrans
     }
 
     private static final class ResourceHandlingHttpChannel implements RestChannel {
+
         private final RestChannel delegate;
         private final CircuitBreakerService circuitBreakerService;
         private final int contentLength;
