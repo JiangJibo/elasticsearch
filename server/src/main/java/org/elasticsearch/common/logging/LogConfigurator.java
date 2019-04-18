@@ -103,8 +103,8 @@ public class LogConfigurator {
      * directory from the specified environment.
      *
      * @param environment the environment for reading configs and the logs path
-     * @throws IOException   if there is an issue readings any log4j2.properties in the config
-     *                       directory
+     * @throws IOException if there is an issue readings any log4j2.properties in the config
+     * directory
      * @throws UserException if there are no log4j2.properties in the specified configs path
      */
     public static void configure(final Environment environment) throws IOException, UserException {
@@ -134,12 +134,12 @@ public class LogConfigurator {
         Objects.requireNonNull(settings);
         Objects.requireNonNull(configsPath);
         Objects.requireNonNull(logsPath);
-
+        // 从环境变量上获取日志配置
         setLogConfigurationSystemProperty(logsPath, settings);
         // we initialize the status logger immediately otherwise Log4j will complain when we try to get the context
         configureStatusLogger();
 
-        final LoggerContext context = (LoggerContext) LogManager.getContext(false);
+        final LoggerContext context = (LoggerContext)LogManager.getContext(false);
 
         final List<AbstractConfiguration> configurations = new ArrayList<>();
         final PropertiesConfigurationFactory factory = new PropertiesConfigurationFactory();
@@ -148,7 +148,7 @@ public class LogConfigurator {
             @Override
             public FileVisitResult visitFile(final Path file, final BasicFileAttributes attrs) throws IOException {
                 if (file.getFileName().toString().equals("log4j2.properties")) {
-                    configurations.add((PropertiesConfiguration) factory.getConfiguration(context, file.toString(), file.toUri()));
+                    configurations.add((PropertiesConfiguration)factory.getConfiguration(context, file.toString(), file.toUri()));
                 }
                 return FileVisitResult.CONTINUE;
             }
@@ -156,8 +156,8 @@ public class LogConfigurator {
 
         if (configurations.isEmpty()) {
             throw new UserException(
-                    ExitCodes.CONFIG,
-                    "no log4j2.properties found; tried [" + configsPath + "] and its subdirectories");
+                ExitCodes.CONFIG,
+                "no log4j2.properties found; tried [" + configsPath + "] and its subdirectories");
         }
 
         context.start(new CompositeConfiguration(configurations));
@@ -187,6 +187,11 @@ public class LogConfigurator {
             final Level level = s.get(settings);
             Loggers.setLevel(ESLoggerFactory.getLogger(s.getKey().substring("logger.".length())), level);
         });
+        // TODO 设置默认的日志级别
+        String logLevel = System.getProperty("logger.level");
+        if (logLevel != null && Level.valueOf(logLevel) != null) {
+            Loggers.setLevel(ESLoggerFactory.getRootLogger(), Level.valueOf(logLevel));
+        }
     }
 
     /**

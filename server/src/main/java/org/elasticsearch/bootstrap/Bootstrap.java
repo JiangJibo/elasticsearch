@@ -73,7 +73,9 @@ final class Bootstrap {
     private final Thread keepAliveThread;
     private final Spawner spawner = new Spawner();
 
-    /** creates a new instance */
+    /**
+     * creates a new instance
+     */
     Bootstrap() {
         keepAliveThread = new Thread(new Runnable() {
             @Override
@@ -95,7 +97,9 @@ final class Bootstrap {
         });
     }
 
-    /** initialize native resources */
+    /**
+     * initialize native resources
+     */
     public static void initializeNatives(Path tmpFile, boolean mlockAll, boolean systemCallFilter, boolean ctrlHandler) {
         final Logger logger = Loggers.getLogger(Bootstrap.class);
 
@@ -112,9 +116,9 @@ final class Bootstrap {
         // mlockall if requested
         if (mlockAll) {
             if (Constants.WINDOWS) {
-               Natives.tryVirtualLock();
+                Natives.tryVirtualLock();
             } else {
-               Natives.tryMlockall();
+                Natives.tryMlockall();
             }
         }
 
@@ -169,10 +173,10 @@ final class Bootstrap {
         }
 
         initializeNatives(
-                environment.tmpFile(),
-                BootstrapSettings.MEMORY_LOCK_SETTING.get(settings),
-                BootstrapSettings.SYSTEM_CALL_FILTER_SETTING.get(settings),
-                BootstrapSettings.CTRLHANDLER_SETTING.get(settings));
+            environment.tmpFile(),
+            BootstrapSettings.MEMORY_LOCK_SETTING.get(settings),
+            BootstrapSettings.SYSTEM_CALL_FILTER_SETTING.get(settings),
+            BootstrapSettings.CTRLHANDLER_SETTING.get(settings));
 
         // initialize probes before the security manager is installed
         initializeProbes();
@@ -183,7 +187,7 @@ final class Bootstrap {
                 public void run() {
                     try {
                         IOUtils.close(node, spawner);
-                        LoggerContext context = (LoggerContext) LogManager.getContext(false);
+                        LoggerContext context = (LoggerContext)LogManager.getContext(false);
                         Configurator.shutdown(context);
                     } catch (IOException ex) {
                         throw new ElasticsearchException("failed to stop node", ex);
@@ -243,12 +247,22 @@ final class Bootstrap {
         return keystore;
     }
 
+    /**
+     * 创建环境信息
+     *
+     * @param foreground
+     * @param pidFile
+     * @param secureSettings
+     * @param initialSettings
+     * @param configPath
+     * @return
+     */
     private static Environment createEnvironment(
-            final boolean foreground,
-            final Path pidFile,
-            final SecureSettings secureSettings,
-            final Settings initialSettings,
-            final Path configPath) {
+        final boolean foreground,
+        final Path pidFile,
+        final SecureSettings secureSettings,
+        final Settings initialSettings,
+        final Path configPath) {
         Terminal terminal = foreground ? Terminal.DEFAULT : null;
         Settings.Builder builder = Settings.builder();
         if (pidFile != null) {
@@ -261,6 +275,11 @@ final class Bootstrap {
         return InternalSettingsPreparer.prepareEnvironment(builder.build(), terminal, Collections.emptyMap(), configPath);
     }
 
+    /**
+     * 节点启动,保证存活线程启动
+     *
+     * @throws NodeValidationException
+     */
     private void start() throws NodeValidationException {
         node.start();
         keepAliveThread.start();
@@ -278,10 +297,10 @@ final class Bootstrap {
      * This method is invoked by {@link Elasticsearch#main(String[])} to startup elasticsearch.
      */
     static void init(
-            final boolean foreground,
-            final Path pidFile,
-            final boolean quiet,
-            final Environment initialEnv) throws BootstrapException, NodeValidationException, UserException {
+        final boolean foreground,
+        final Path pidFile,
+        final boolean quiet,
+        final Environment initialEnv) throws BootstrapException, NodeValidationException, UserException {
         // force the class initializer for BootstrapInfo to run before
         // the security manager is installed
         BootstrapInfo.init();
@@ -291,6 +310,7 @@ final class Bootstrap {
         final SecureSettings keystore = loadSecureSettings(initialEnv);
         final Environment environment = createEnvironment(foreground, pidFile, keystore, initialEnv.settings(), initialEnv.configFile());
         try {
+            // 设置日志级别,添加了从环境变量上通知logger.level来指定级别,比如: -Dlogger.level=DEBUG
             LogConfigurator.configure(environment);
         } catch (IOException e) {
             throw new BootstrapException(e);

@@ -145,6 +145,16 @@ class Elasticsearch extends EnvironmentAwareCommand {
         }
     }
 
+    /**
+     * Elasticsearch初始化
+     *
+     * @param daemonize  是否是后台进程
+     * @param pidFile    是否创建一个pid文件
+     * @param quiet      是否不抛出异常
+     * @param initialEnv
+     * @throws NodeValidationException
+     * @throws UserException
+     */
     void init(final boolean daemonize, final Path pidFile, final boolean quiet, Environment initialEnv)
         throws NodeValidationException, UserException {
         try {

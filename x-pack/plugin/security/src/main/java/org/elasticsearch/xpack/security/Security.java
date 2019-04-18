@@ -238,6 +238,9 @@ import static org.elasticsearch.xpack.core.security.SecurityLifecycleServiceFiel
 import static org.elasticsearch.xpack.core.security.SecurityLifecycleServiceField.SECURITY_TEMPLATE_NAME;
 import static org.elasticsearch.xpack.security.support.IndexLifecycleManager.INTERNAL_INDEX_FORMAT;
 
+/**
+ * Elasticsearch插件的实现入口
+ */
 public class Security extends Plugin implements ActionPlugin, IngestPlugin, NetworkPlugin, ClusterPlugin, DiscoveryPlugin, MapperPlugin,
         ExtensiblePlugin {
 

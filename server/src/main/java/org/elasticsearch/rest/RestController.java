@@ -94,6 +94,7 @@ public class RestController extends AbstractComponent implements HttpServerTrans
     }
 
     /**
+     * 注册针对不同的Rest请求处理器
      * Registers a REST handler to be executed when the provided {@code method} and {@code path} match the request.
      *
      * @param method             GET, POST, etc.
