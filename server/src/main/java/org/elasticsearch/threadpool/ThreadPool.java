@@ -164,10 +164,16 @@ public class ThreadPool extends AbstractComponent implements Scheduler, Closeabl
         assert Node.NODE_NAME_SETTING.exists(settings);
 
         final Map<String, ExecutorBuilder> builders = new HashMap<>();
+        // 可用核心数目,取物理核心数量
         final int availableProcessors = EsExecutors.numberOfProcessors(settings);
+        // 取 核心数+1 /2 与 5的较小值
         final int halfProcMaxAt5 = halfNumberOfProcessorsMaxFive(availableProcessors);
+        // 取 核心数+1 /2 与 10的较小值
         final int halfProcMaxAt10 = halfNumberOfProcessorsMaxTen(availableProcessors);
+        // 线程池最大线程数，取 128与4倍核心数的较大值,但不大于 512
         final int genericThreadPoolMax = boundedBy(4 * availableProcessors, 128, 512);
+
+        // 针对所有功能设置不同的线程池,不同的参数
         builders.put(Names.GENERIC, new ScalingExecutorBuilder(Names.GENERIC, 4, genericThreadPoolMax, TimeValue.timeValueSeconds(30)));
         builders.put(Names.INDEX, new FixedExecutorBuilder(settings, Names.INDEX, availableProcessors, 200, true));
         builders.put(Names.WRITE, new FixedExecutorBuilder(settings, Names.WRITE, "bulk", availableProcessors, 200));

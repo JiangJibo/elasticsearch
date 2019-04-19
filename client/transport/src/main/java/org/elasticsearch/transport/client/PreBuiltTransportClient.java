@@ -84,6 +84,9 @@ public class PreBuiltTransportClient extends TransportClient {
         }
     }
 
+    /**
+     * 前置安装的插件
+     */
     private static final Collection<Class<? extends Plugin>> PRE_INSTALLED_PLUGINS =
         Collections.unmodifiableList(
             Arrays.asList(
