@@ -42,6 +42,9 @@ import java.util.concurrent.CopyOnWriteArraySet;
  */
 public class ResourceWatcherService extends AbstractLifecycleComponent {
 
+    /**
+     * 频率, 资源watch频率
+     */
     public enum Frequency {
 
         /**
@@ -105,6 +108,9 @@ public class ResourceWatcherService extends AbstractLifecycleComponent {
         logRemovedSetting("watcher.interval.high", "resource.reload.interval.high");
     }
 
+    /**
+     * 启动资源检测服务
+     */
     @Override
     protected void doStart() {
         if (!enabled) {
@@ -173,6 +179,10 @@ public class ResourceWatcherService extends AbstractLifecycleComponent {
         }
     }
 
+    /**
+     * 资源检测器,简介调用 {@link FileWatcher#doInit()} {@link FileWatcher#doCheckAndNotify()}
+     * 检测文件资源
+     */
     class ResourceMonitor implements Runnable {
 
         final TimeValue interval;

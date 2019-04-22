@@ -60,8 +60,14 @@ import java.util.concurrent.TimeUnit;
 
 import static java.util.Collections.unmodifiableMap;
 
+/**
+ * 线程池,针对每个组件都定义相应的线程池
+ */
 public class ThreadPool extends AbstractComponent implements Scheduler, Closeable {
 
+    /**
+     * 组件名称
+     */
     public static class Names {
         public static final String SAME = "same";
         public static final String GENERIC = "generic";
@@ -83,8 +89,20 @@ public class ThreadPool extends AbstractComponent implements Scheduler, Closeabl
 
     public enum ThreadPoolType {
         DIRECT("direct"),
+        /**
+         * {@link FixedExecutorBuilder}
+         * 固定线程数和任务队列的线程池
+         */
         FIXED("fixed"),
+        /**
+         * {@link AutoQueueAdjustingExecutorBuilder}
+         * 固定线程数,但能自动缩放任务队列的线程池
+         */
         FIXED_AUTO_QUEUE_SIZE("fixed_auto_queue_size"),
+        /**
+         * 线程数目有core和max的线程池
+         * {@link ScalingExecutorBuilder }
+         */
         SCALING("scaling");
 
         private final String type;
@@ -118,6 +136,7 @@ public class ThreadPool extends AbstractComponent implements Scheduler, Closeabl
 
     public static final Map<String, ThreadPoolType> THREAD_POOL_TYPES;
 
+    // 组件对应的线程池类型
     static {
         HashMap<String, ThreadPoolType> map = new HashMap<>();
         map.put(Names.SAME, ThreadPoolType.DIRECT);

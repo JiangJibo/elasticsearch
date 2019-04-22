@@ -272,6 +272,7 @@ public class Node implements Closeable {
             } catch (IOException ex) {
                 throw new IllegalStateException("Failed to create node environment", ex);
             }
+            // 是否在参数中指定了节点名称
             final boolean hadPredefinedNodeName = NODE_NAME_SETTING.exists(tmpSettings);
             final String nodeId = nodeEnvironment.nodeId();
             tmpSettings = addNodeNameIfNeeded(tmpSettings, nodeId);
@@ -318,7 +319,7 @@ public class Node implements Closeable {
             Environment.assertEquivalent(environment, this.environment);
 
             final List<ExecutorBuilder<?>> executorBuilders = pluginsService.getExecutorBuilders(settings);
-
+            // 针对每种组件都设置相应的线程池
             final ThreadPool threadPool = new ThreadPool(settings, executorBuilders.toArray(new ExecutorBuilder[0]));
             resourcesToClose.add(() -> ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS));
             // adds the context to the DeprecationLogger so that it does not need to be injected everywhere
@@ -330,7 +331,10 @@ public class Node implements Closeable {
             for (final ExecutorBuilder<?> builder : threadPool.builders()) {
                 additionalSettings.addAll(builder.getRegisteredSettings());
             }
+            // 创建客户端节点
             client = new NodeClient(settings, threadPool);
+            // 创建资源观察者服务,目前主要是观察文件资源,可自定义注册文件资源观察者,当文件发生变化时得到通知
+            //  {@link  FileWatcher}
             final ResourceWatcherService resourceWatcherService = new ResourceWatcherService(settings, threadPool);
             final ScriptModule scriptModule = new ScriptModule(settings, pluginsService.filterPlugins(ScriptPlugin.class));
             AnalysisModule analysisModule = new AnalysisModule(this.environment, pluginsService.filterPlugins(AnalysisPlugin.class));
@@ -339,6 +343,8 @@ public class Node implements Closeable {
             final SettingsModule settingsModule = new SettingsModule(this.settings, additionalSettings, additionalSettingsFilter);
             scriptModule.registerClusterSettingsListeners(settingsModule.getClusterSettings());
             resourcesToClose.add(resourceWatcherService);
+
+            // 网络服务
             final NetworkService networkService = new NetworkService(
                 getCustomNameResolvers(pluginsService.filterPlugins(DiscoveryPlugin.class)));
 

@@ -21,9 +21,11 @@ package org.elasticsearch.watcher;
 import java.nio.file.Path;
 
 /**
+ * 文件变化监听器
  * Callback interface that file changes File Watcher is using to notify listeners about changes.
  */
 public interface FileChangesListener {
+
     /**
      * Called for every file found in the watched directory during initialization
      */
