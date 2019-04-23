@@ -150,6 +150,7 @@ public abstract class TransportClient extends AbstractClient {
         // 创建线程池
         final ThreadPool threadPool = new ThreadPool(settings);
         resourcesToClose.add(() -> ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS));
+        // 网络服务,设置TCP链接参数,IP地址和域名解析等
         final NetworkService networkService = new NetworkService(Collections.emptyList());
         try {
             final List<Setting<?>> additionalSettings = new ArrayList<>(pluginsService.getPluginSettings());
@@ -158,7 +159,7 @@ public abstract class TransportClient extends AbstractClient {
                 additionalSettings.addAll(builder.getRegisteredSettings());
             }
             SettingsModule settingsModule = new SettingsModule(settings, additionalSettings, additionalSettingsFilter);
-
+            //搜索模块
             SearchModule searchModule = new SearchModule(settings, true, pluginsService.filterPlugins(SearchPlugin.class));
             List<NamedWriteableRegistry.Entry> entries = new ArrayList<>();
             entries.addAll(NetworkModule.getNamedWriteables());
@@ -188,6 +189,7 @@ public abstract class TransportClient extends AbstractClient {
             CircuitBreakerService circuitBreakerService = Node.createCircuitBreakerService(settingsModule.getSettings(),
                 settingsModule.getClusterSettings());
             resourcesToClose.add(circuitBreakerService);
+            // 页缓存循环利用
             PageCacheRecycler pageCacheRecycler = new PageCacheRecycler(settings);
             BigArrays bigArrays = new BigArrays(pageCacheRecycler, circuitBreakerService);
             resourcesToClose.add(bigArrays);

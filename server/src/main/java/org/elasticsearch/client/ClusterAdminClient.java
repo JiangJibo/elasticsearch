@@ -119,6 +119,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.tasks.TaskId;
 
 /**
+ * 集群管理的Admin客户端
  * Administrative actions/operations against indices.
  *
  * @see AdminClient#cluster()
@@ -272,8 +273,7 @@ public interface ClusterAdminClient extends ElasticsearchClient {
      * sampled for the node ids specified in the request. Nodes usage of the
      * cluster.
      *
-     * @param request
-     *            The nodes usage request
+     * @param request The nodes usage request
      * @return The result future
      * @see org.elasticsearch.client.Requests#nodesUsageRequest(String...)
      */
@@ -282,10 +282,8 @@ public interface ClusterAdminClient extends ElasticsearchClient {
     /**
      * Nodes usage of the cluster.
      *
-     * @param request
-     *            The nodes usage request
-     * @param listener
-     *            A listener to be notified with a result
+     * @param request  The nodes usage request
+     * @param listener A listener to be notified with a result
      * @see org.elasticsearch.client.Requests#nodesUsageRequest(String...)
      */
     void nodesUsage(NodesUsageRequest request, ActionListener<NodesUsageResponse> listener);
@@ -298,7 +296,6 @@ public interface ClusterAdminClient extends ElasticsearchClient {
     /**
      * Returns top N hot-threads samples per node. The hot-threads are only
      * sampled for the node ids specified in the request.
-     *
      */
     ActionFuture<NodesHotThreadsResponse> nodesHotThreads(NodesHotThreadsRequest request);
 
@@ -349,7 +346,7 @@ public interface ClusterAdminClient extends ElasticsearchClient {
     /**
      * Get a task.
      *
-     * @param request the request
+     * @param request  the request
      * @param listener A listener to be notified with the result
      * @see org.elasticsearch.client.Requests#getTaskRequest()
      */
@@ -578,6 +575,7 @@ public interface ClusterAdminClient extends ElasticsearchClient {
 
     /**
      * Stores an ingest pipeline
+     *
      * @deprecated use {@link #preparePutPipeline(String, BytesReference, XContentType)}
      */
     @Deprecated

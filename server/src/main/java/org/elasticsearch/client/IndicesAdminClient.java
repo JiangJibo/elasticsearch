@@ -122,6 +122,7 @@ import org.elasticsearch.action.admin.indices.validate.query.ValidateQueryRespon
 import org.elasticsearch.common.Nullable;
 
 /**
+ * 索引管理的客户端
  * Administrative actions/operations against indices.
  *
  * @see AdminClient#indices()
@@ -150,7 +151,6 @@ public interface IndicesAdminClient extends ElasticsearchClient {
      * Indices exists.
      */
     IndicesExistsRequestBuilder prepareExists(String... indices);
-
 
     /**
      * Types Exists.
@@ -194,7 +194,7 @@ public interface IndicesAdminClient extends ElasticsearchClient {
     ActionFuture<RecoveryResponse> recoveries(RecoveryRequest request);
 
     /**
-     *Indices recoveries
+     * Indices recoveries
      */
     void recoveries(RecoveryRequest request, ActionListener<RecoveryResponse> listener);
 
@@ -238,7 +238,7 @@ public interface IndicesAdminClient extends ElasticsearchClient {
     /**
      * The shard stores info of one or more indices.
      *
-     * @param request The indices shard stores request
+     * @param request  The indices shard stores request
      * @param listener A listener to be notified with a result
      * @see Requests#indicesShardStoresRequest(String...)
      */
@@ -388,7 +388,7 @@ public interface IndicesAdminClient extends ElasticsearchClient {
      * @param listener A listener to be notified with a result
      * @see org.elasticsearch.client.Requests#flushRequest(String...)
      */
-    void flush(FlushRequest request, ActionListener <FlushResponse> listener);
+    void flush(FlushRequest request, ActionListener<FlushResponse> listener);
 
     /**
      * Explicitly flush one or more indices (releasing memory from the node).
@@ -411,7 +411,7 @@ public interface IndicesAdminClient extends ElasticsearchClient {
      * @param listener A listener to be notified with a result
      * @see org.elasticsearch.client.Requests#syncedFlushRequest(String...)
      */
-    void syncedFlush(SyncedFlushRequest request, ActionListener <SyncedFlushResponse> listener);
+    void syncedFlush(SyncedFlushRequest request, ActionListener<SyncedFlushResponse> listener);
 
     /**
      * Explicitly sync flush one or more indices (write sync id to shards for faster recovery).
@@ -460,7 +460,7 @@ public interface IndicesAdminClient extends ElasticsearchClient {
     void upgrade(UpgradeRequest request, ActionListener<UpgradeResponse> listener);
 
     /**
-     *  Explicitly upgrade one or more indices
+     * Explicitly upgrade one or more indices
      */
     UpgradeStatusRequestBuilder prepareUpgradeStatus(String... indices);
 
@@ -694,7 +694,6 @@ public interface IndicesAdminClient extends ElasticsearchClient {
 
     /**
      * Analyze text/texts.
-     *
      */
     AnalyzeRequestBuilder prepareAnalyze();
 
@@ -777,12 +776,14 @@ public interface IndicesAdminClient extends ElasticsearchClient {
 
     /**
      * Executed a per index settings get request.
+     *
      * @see #getSettings(org.elasticsearch.action.admin.indices.settings.get.GetSettingsRequest)
      */
     ActionFuture<GetSettingsResponse> getSettings(GetSettingsRequest request);
 
     /**
      * Returns a builder for a per index settings get request.
+     *
      * @param indices the indices to fetch the setting for.
      * @see #getSettings(org.elasticsearch.action.admin.indices.settings.get.GetSettingsRequest)
      */

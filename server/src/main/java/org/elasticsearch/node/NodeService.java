@@ -63,6 +63,25 @@ public class NodeService extends AbstractComponent implements Closeable {
 
     private final Discovery discovery;
 
+    /**
+     * 节点服务Service
+     *
+     * @param settings                 配置信息
+     * @param threadPool               线程池
+     * @param monitorService           监控服务
+     * @param discovery                发现服务
+     * @param transportService         传输服务
+     * @param indicesService           索引服务
+     * @param pluginService            插件服务
+     * @param circuitBreakerService    回环打破服务
+     * @param scriptService            脚本服务
+     * @param httpServerTransport      http服务端传输器
+     * @param ingestService
+     * @param clusterService           集群服务
+     * @param settingsFilter           设置过滤
+     * @param responseCollectorService 响应收集服务
+     * @param searchTransportService   搜索传输服务
+     */
     NodeService(Settings settings, ThreadPool threadPool, MonitorService monitorService, Discovery discovery,
                 TransportService transportService, IndicesService indicesService, PluginsService pluginService,
                 CircuitBreakerService circuitBreakerService, ScriptService scriptService,
@@ -88,18 +107,18 @@ public class NodeService extends AbstractComponent implements Closeable {
     }
 
     public NodeInfo info(boolean settings, boolean os, boolean process, boolean jvm, boolean threadPool,
-                boolean transport, boolean http, boolean plugin, boolean ingest, boolean indices) {
+                         boolean transport, boolean http, boolean plugin, boolean ingest, boolean indices) {
         return new NodeInfo(Version.CURRENT, Build.CURRENT, transportService.getLocalNode(),
-                settings ? settingsFilter.filter(this.settings) : null,
-                os ? monitorService.osService().info() : null,
-                process ? monitorService.processService().info() : null,
-                jvm ? monitorService.jvmService().info() : null,
-                threadPool ? this.threadPool.info() : null,
-                transport ? transportService.info() : null,
-                http ? (httpServerTransport == null ? null : httpServerTransport.info()) : null,
-                plugin ? (pluginService == null ? null : pluginService.info()) : null,
-                ingest ? (ingestService == null ? null : ingestService.info()) : null,
-                indices ? indicesService.getTotalIndexingBufferBytes() : null
+            settings ? settingsFilter.filter(this.settings) : null,
+            os ? monitorService.osService().info() : null,
+            process ? monitorService.processService().info() : null,
+            jvm ? monitorService.jvmService().info() : null,
+            threadPool ? this.threadPool.info() : null,
+            transport ? transportService.info() : null,
+            http ? (httpServerTransport == null ? null : httpServerTransport.info()) : null,
+            plugin ? (pluginService == null ? null : pluginService.info()) : null,
+            ingest ? (ingestService == null ? null : ingestService.info()) : null,
+            indices ? indicesService.getTotalIndexingBufferBytes() : null
         );
     }
 
@@ -109,19 +128,19 @@ public class NodeService extends AbstractComponent implements Closeable {
         // for indices stats we want to include previous allocated shards stats as well (it will
         // only be applied to the sensible ones to use, like refresh/merge/flush/indexing stats)
         return new NodeStats(transportService.getLocalNode(), System.currentTimeMillis(),
-                indices.anySet() ? indicesService.stats(true, indices) : null,
-                os ? monitorService.osService().stats() : null,
-                process ? monitorService.processService().stats() : null,
-                jvm ? monitorService.jvmService().stats() : null,
-                threadPool ? this.threadPool.stats() : null,
-                fs ? monitorService.fsService().stats() : null,
-                transport ? transportService.stats() : null,
-                http ? (httpServerTransport == null ? null : httpServerTransport.stats()) : null,
-                circuitBreaker ? circuitBreakerService.stats() : null,
-                script ? scriptService.stats() : null,
-                discoveryStats ? discovery.stats() : null,
-                ingest ? ingestService.getPipelineExecutionService().stats() : null,
-                adaptiveSelection ? responseCollectorService.getAdaptiveStats(searchTransportService.getPendingSearchRequests()) : null
+            indices.anySet() ? indicesService.stats(true, indices) : null,
+            os ? monitorService.osService().stats() : null,
+            process ? monitorService.processService().stats() : null,
+            jvm ? monitorService.jvmService().stats() : null,
+            threadPool ? this.threadPool.stats() : null,
+            fs ? monitorService.fsService().stats() : null,
+            transport ? transportService.stats() : null,
+            http ? (httpServerTransport == null ? null : httpServerTransport.stats()) : null,
+            circuitBreaker ? circuitBreakerService.stats() : null,
+            script ? scriptService.stats() : null,
+            discoveryStats ? discovery.stats() : null,
+            ingest ? ingestService.getPipelineExecutionService().stats() : null,
+            adaptiveSelection ? responseCollectorService.getAdaptiveStats(searchTransportService.getPendingSearchRequests()) : null
         );
     }
 
