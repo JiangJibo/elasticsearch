@@ -314,6 +314,7 @@ public class SecurityServerTransportInterceptor extends AbstractComponent implem
                     ActionListener<Void> filterListener = ActionListener.wrap(consumer, receiveMessage::onFailure);
                     filter.inbound(action, request, channel, filterListener);
                 } else {
+                    // 跳转到258行的doRun();
                     receiveMessage.run();
                 }
             }

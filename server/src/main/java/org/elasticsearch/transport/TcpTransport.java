@@ -164,7 +164,6 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         Setting.byteSizeSetting("transport.tcp.receive_buffer_size", NetworkService.TCP_RECEIVE_BUFFER_SIZE,
             Setting.Property.NodeScope);
 
-
     public static final Setting.AffixSetting<Boolean> TCP_NO_DELAY_PROFILE = affixKeySetting("transport.profiles.", "tcp_no_delay",
         key -> boolSetting(key, TcpTransport.TCP_NO_DELAY, Setting.Property.NodeScope));
     public static final Setting.AffixSetting<Boolean> TCP_KEEP_ALIVE_PROFILE = affixKeySetting("transport.profiles.", "tcp_keep_alive",
@@ -185,7 +184,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     public static final Setting.AffixSetting<Integer> PUBLISH_PORT_PROFILE = affixKeySetting("transport.profiles.", "publish_port",
         key -> intSetting(key, -1, -1, Setting.Property.NodeScope));
 
-    private static final long NINETY_PER_HEAP_SIZE = (long) (JvmInfo.jvmInfo().getMem().getHeapMax().getBytes() * 0.9);
+    private static final long NINETY_PER_HEAP_SIZE = (long)(JvmInfo.jvmInfo().getMem().getHeapMax().getBytes() * 0.9);
     public static final int PING_DATA_SIZE = -1;
 
     public static final String FEATURE_PREFIX = "transport.features";
@@ -298,6 +297,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     }
 
     private static class HandshakeResponseHandler implements TransportResponseHandler<VersionHandshakeResponse> {
+
         final AtomicReference<Version> versionRef = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<Exception> exceptionRef = new AtomicReference<>();
@@ -345,8 +345,8 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         public ScheduledPing() {
             super(lifecycle, logger);
             try (BytesStreamOutput out = new BytesStreamOutput()) {
-                out.writeByte((byte) 'E');
-                out.writeByte((byte) 'S');
+                out.writeByte((byte)'E');
+                out.writeByte((byte)'S');
                 out.writeInt(PING_DATA_SIZE);
                 pingHeader = out.bytes();
             } catch (IOException e) {
@@ -414,6 +414,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     }
 
     public final class NodeChannels implements Connection {
+
         private final Map<TransportRequestOptions.Type, ConnectionProfile.ConnectionTypeHandle> typeMapping;
         private final List<TcpChannel> channels;
         private final DiscoveryNode node;
@@ -427,8 +428,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 + connectionProfile.getNumConnections() + " but was: [" + channels.size() + "]";
             typeMapping = new EnumMap<>(TransportRequestOptions.Type.class);
             for (ConnectionProfile.ConnectionTypeHandle handle : connectionProfile.getHandles()) {
-                for (TransportRequestOptions.Type type : handle.getTypes())
-                    typeMapping.put(type, handle);
+                for (TransportRequestOptions.Type type : handle.getTypes()) { typeMapping.put(type, handle); }
             }
             version = handshakeVersion;
         }
@@ -496,7 +496,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 throw new NodeNotConnectedException(node, "connection already closed");
             }
             TcpChannel channel = channel(options.type());
-            sendRequestToChannel(this.node, channel, requestId, action, request, options, getVersion(), (byte) 0);
+            sendRequestToChannel(this.node, channel, requestId, action, request, options, getVersion(), (byte)0);
         }
 
         boolean isClosed() {
@@ -764,7 +764,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             for (int i = 0; i < hostAddresses.length; i++) {
                 addresses[i] = NetworkAddress.format(hostAddresses[i]);
             }
-            logger.debug("binding server bootstrap to: {}", (Object) addresses);
+            logger.debug("binding server bootstrap to: {}", (Object)addresses);
         }
 
         assert hostAddresses.length > 0;
@@ -894,7 +894,9 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     // not perfect, but PortsRange should take care of any port range validation, not a regex
     private static final Pattern BRACKET_PATTERN = Pattern.compile("^\\[(.*:.*)\\](?::([\\d\\-]*))?$");
 
-    /** parse a hostname+port range spec into its equivalent addresses */
+    /**
+     * parse a hostname+port range spec into its equivalent addresses
+     */
     static TransportAddress[] parse(String hostPortString, String defaultPortRange, int perAddressLimit) throws UnknownHostException {
         Objects.requireNonNull(hostPortString);
         String host;
@@ -957,7 +959,8 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 for (Map.Entry<String, List<TcpChannel>> entry : serverChannels.entrySet()) {
                     String profile = entry.getKey();
                     List<TcpChannel> channels = entry.getValue();
-                    ActionListener<Void> closeFailLogger = ActionListener.wrap(c -> {},
+                    ActionListener<Void> closeFailLogger = ActionListener.wrap(c -> {
+                        },
                         e -> logger.warn(() -> new ParameterizedMessage("Error closing serverChannel for profile [{}]", profile), e));
                     channels.forEach(c -> c.addCloseListener(closeFailLogger));
                     TcpChannel.closeChannels(channels, true);
@@ -967,7 +970,6 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 // close all of the incoming channels. The closeChannels method takes a list so we must convert the set.
                 TcpChannel.closeChannels(new ArrayList<>(acceptedChannels), true);
                 acceptedChannels.clear();
-
 
                 // we are holding a write lock so nobody modifies the connectedNodes / openConnections map - it's safe to first close
                 // all instances and then clear them maps
@@ -1005,7 +1007,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
 
         if (isCloseConnectionException(e)) {
             logger.trace(() -> new ParameterizedMessage(
-                    "close connection exception caught on transport layer [{}], disconnecting from relevant node", channel), e);
+                "close connection exception caught on transport layer [{}], disconnecting from relevant node", channel), e);
             // close the channel, which will cause a node to be disconnected if relevant
             TcpChannel.closeChannel(channel, false);
         } else if (isConnectException(e)) {
@@ -1018,7 +1020,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             TcpChannel.closeChannel(channel, false);
         } else if (e instanceof CancelledKeyException) {
             logger.trace(() -> new ParameterizedMessage(
-                    "cancelled key exception caught on transport layer [{}], disconnecting from relevant node", channel), e);
+                "cancelled key exception caught on transport layer [{}], disconnecting from relevant node", channel), e);
             // close the channel as safe measure, which will cause a node to be disconnected if relevant
             TcpChannel.closeChannel(channel, false);
         } else if (e instanceof TcpTransport.HttpOnTransportException) {
@@ -1065,9 +1067,9 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
      * Initiate a single tcp socket channel to a node. Implementations do not have to observe the connectTimeout.
      * It is provided for synchronous connection implementations.
      *
-     * @param node              the node
-     * @param connectTimeout    the connection timeout
-     * @param connectListener   listener to be called when connection complete
+     * @param node            the node
+     * @param connectTimeout  the connection timeout
+     * @param connectListener listener to be called when connection complete
      * @return the pending connection
      * @throws IOException if an I/O exception occurs while opening the channel
      */
@@ -1154,12 +1156,12 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
      * @param action      the action this response replies to
      */
     public void sendErrorResponse(
-            final Version nodeVersion,
-            final Set<String> features,
-            final TcpChannel channel,
-            final Exception error,
-            final long requestId,
-            final String action) throws IOException {
+        final Version nodeVersion,
+        final Set<String> features,
+        final TcpChannel channel,
+        final Exception error,
+        final long requestId,
+        final String action) throws IOException {
         try (BytesStreamOutput stream = new BytesStreamOutput()) {
             stream.setVersion(nodeVersion);
             stream.setFeatures(features);
@@ -1185,25 +1187,25 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
      * @see #sendErrorResponse(Version, Set, TcpChannel, Exception, long, String) for sending back errors to the caller
      */
     public void sendResponse(
-            final Version nodeVersion,
-            final Set<String> features,
-            final TcpChannel channel,
-            final TransportResponse response,
-            final long requestId,
-            final String action,
-            final TransportResponseOptions options) throws IOException {
-        sendResponse(nodeVersion, features, channel, response, requestId, action, options, (byte) 0);
+        final Version nodeVersion,
+        final Set<String> features,
+        final TcpChannel channel,
+        final TransportResponse response,
+        final long requestId,
+        final String action,
+        final TransportResponseOptions options) throws IOException {
+        sendResponse(nodeVersion, features, channel, response, requestId, action, options, (byte)0);
     }
 
     private void sendResponse(
-            final Version nodeVersion,
-            final Set<String> features,
-            final TcpChannel channel,
-            final TransportResponse response,
-            final long requestId,
-            final String action,
-            TransportResponseOptions options,
-            byte status) throws IOException {
+        final Version nodeVersion,
+        final Set<String> features,
+        final TcpChannel channel,
+        final TransportResponse response,
+        final long requestId,
+        final String action,
+        TransportResponseOptions options,
+        byte status) throws IOException {
         if (compress) {
             options = TransportResponseOptions.builder(options).withCompress(true).build();
         }
@@ -1260,7 +1262,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                                         CompressibleBytesOutputStream stream) throws IOException {
         final BytesReference zeroCopyBuffer;
         if (message instanceof BytesTransportRequest) { // what a shitty optimization - we should use a direct send method instead
-            BytesTransportRequest bRequest = (BytesTransportRequest) message;
+            BytesTransportRequest bRequest = (BytesTransportRequest)message;
             assert nodeVersion.equals(bRequest.version());
             bRequest.writeThin(stream);
             zeroCopyBuffer = bRequest.bytes;
@@ -1282,10 +1284,10 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
      * Validates the first N bytes of the message header and returns <code>false</code> if the message is
      * a ping message and has no payload ie. isn't a real user level message.
      *
-     * @throws IllegalStateException    if the message is too short, less than the header or less that the header plus the message size
+     * @throws IllegalStateException if the message is too short, less than the header or less that the header plus the message size
      * @throws HttpOnTransportException if the message has no valid header and appears to be a HTTP message
      * @throws IllegalArgumentException if the message is greater that the maximum allowed frame size. This is dependent on the available
-     *                                  memory.
+     * memory.
      */
     public static boolean validateMessageHeader(BytesReference buffer) throws IOException {
         final int sizeHeaderLength = TcpHeader.MARKER_BYTES_SIZE + TcpHeader.MESSAGE_LENGTH_SIZE;
@@ -1384,9 +1386,13 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         StreamInput streamIn = reference.streamInput();
         boolean success = false;
         try (ThreadContext.StoredContext tCtx = threadPool.getThreadContext().stashContext()) {
+            // 请求id
             long requestId = streamIn.readLong();
+            // 请求状态
             byte status = streamIn.readByte();
+            // 版本信息
             Version version = Version.fromId(streamIn.readInt());
+            // 如果status标识压缩数据且有数据可读
             if (TransportStatus.isCompress(status) && hasMessageBytesToRead && streamIn.available() > 0) {
                 Compressor compressor;
                 try {
@@ -1405,18 +1411,23 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 }
                 streamIn = compressor.streamInput(streamIn);
             }
+            // 是不是tcp握手包
             final boolean isHandshake = TransportStatus.isHandshake(status);
+            // 确认版本兼容
             ensureVersionCompatibility(version, getCurrentVersion(), isHandshake);
             streamIn = new NamedWriteableAwareStreamInput(streamIn, namedWriteableRegistry);
             streamIn.setVersion(version);
             threadPool.getThreadContext().readHeaders(streamIn);
+            // 如果是请求
             if (TransportStatus.isRequest(status)) {
                 handleRequest(channel, profileName, streamIn, requestId, messageLengthBytes, version, remoteAddress, status);
             } else {
                 final TransportResponseHandler<?> handler;
+                // 如果是握手
                 if (isHandshake) {
                     handler = pendingHandshakes.remove(requestId);
                 } else {
+                    // 剩下的就是响应
                     TransportResponseHandler theHandler = transportService.onResponseReceived(requestId);
                     if (theHandler == null && TransportStatus.isError(status)) {
                         handler = pendingHandshakes.remove(requestId);
@@ -1504,7 +1515,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         if (!(error instanceof RemoteTransportException)) {
             error = new RemoteTransportException(error.getMessage(), error);
         }
-        final RemoteTransportException rtx = (RemoteTransportException) error;
+        final RemoteTransportException rtx = (RemoteTransportException)error;
         threadPool.executor(handler.executor()).execute(() -> {
             try {
                 handler.handleException(rtx);
@@ -1514,6 +1525,20 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         });
     }
 
+    /**
+     * 处理TCP传来的transport请求
+     *
+     * @param channel
+     * @param profileName
+     * @param stream
+     * @param requestId
+     * @param messageLengthBytes
+     * @param version
+     * @param remoteAddress
+     * @param status
+     * @return
+     * @throws IOException
+     */
     protected String handleRequest(TcpChannel channel, String profileName, final StreamInput stream, long requestId,
                                    int messageLengthBytes, Version version, InetSocketAddress remoteAddress, byte status)
         throws IOException {
@@ -1523,6 +1548,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         } else {
             features = Collections.emptySet();
         }
+        // 指定action
         final String action = stream.readString();
         transportService.onRequestReceived(requestId, action);
         TransportChannel transportChannel = null;
@@ -1530,7 +1556,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             if (TransportStatus.isHandshake(status)) {
                 final VersionHandshakeResponse response = new VersionHandshakeResponse(getCurrentVersion());
                 sendResponse(version, features, channel, response, requestId, HANDSHAKE_ACTION_NAME, TransportResponseOptions.EMPTY,
-                    TransportStatus.setHandshake((byte) 0));
+                    TransportStatus.setHandshake((byte)0));
             } else {
                 final RequestHandlerRegistry reg = transportService.getRequestHandler(action);
                 if (reg == null) {
@@ -1553,7 +1579,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             // the circuit breaker tripped
             if (transportChannel == null) {
                 transportChannel =
-                        new TcpTransportChannel(this, channel, transportName, action, requestId, version, features, profileName, 0);
+                    new TcpTransportChannel(this, channel, transportName, action, requestId, version, features, profileName, 0);
             }
             try {
                 transportChannel.sendResponse(e);
@@ -1575,7 +1601,11 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         }
     }
 
+    /**
+     * 每个tcp请求封装成一个此对象,然后投递到线程池运行处理
+     */
     class RequestHandler extends AbstractRunnable {
+
         private final RequestHandlerRegistry reg;
         private final TransportRequest request;
         private final TransportChannel transportChannel;
@@ -1586,6 +1616,11 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             this.transportChannel = transportChannel;
         }
 
+        /**
+         * 每次请求封装成一个当前对象,然后执行此方法
+         *
+         * @throws Exception
+         */
         @SuppressWarnings({"unchecked"})
         @Override
         protected void doRun() throws Exception {
@@ -1606,13 +1641,14 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 } catch (Exception inner) {
                     inner.addSuppressed(e);
                     logger.warn(() -> new ParameterizedMessage(
-                            "Failed to send error message back to client for action [{}]", reg.getAction()), inner);
+                        "Failed to send error message back to client for action [{}]", reg.getAction()), inner);
                 }
             }
         }
     }
 
     private static final class VersionHandshakeResponse extends TransportResponse {
+
         private Version version;
 
         private VersionHandshakeResponse(Version version) {
@@ -1658,7 +1694,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             // to as the payload.
             final Version minCompatVersion = getCurrentVersion().minimumCompatibilityVersion();
             sendRequestToChannel(node, channel, requestId, HANDSHAKE_ACTION_NAME, TransportRequest.Empty.INSTANCE,
-                TransportRequestOptions.EMPTY, minCompatVersion, TransportStatus.setHandshake((byte) 0));
+                TransportRequestOptions.EMPTY, minCompatVersion, TransportStatus.setHandshake((byte)0));
             if (handler.latch.await(timeout.millis(), TimeUnit.MILLISECONDS) == false) {
                 throw new ConnectTransportException(node, "handshake_timeout[" + timeout + "]");
             }
@@ -1726,6 +1762,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
      * This listener increments the transmitted bytes metric on success.
      */
     private abstract class SendMetricListener extends NotifyOnceListener<Void> {
+
         private final long messageSize;
 
         private SendMetricListener(long messageSize) {
@@ -1742,6 +1779,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     }
 
     private final class SendListener extends SendMetricListener {
+
         private final TcpChannel channel;
         private final Closeable optionalCloseable;
         private final Runnable transportAdaptorCallback;
@@ -1804,6 +1842,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
      * Representation of a transport profile settings for a <tt>transport.profiles.$profilename.*</tt>
      */
     public static final class ProfileSettings {
+
         public final String profileName;
         public final boolean tcpNoDelay;
         public final boolean tcpKeepAlive;

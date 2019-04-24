@@ -31,11 +31,15 @@ import org.elasticsearch.transport.Transports;
 import java.net.InetSocketAddress;
 
 /**
+ * Netty处理消息的Handler
  * A handler (must be the last one!) that does size based frame decoding and forwards the actual message
  * to the relevant action.
  */
 final class Netty4MessageChannelHandler extends ChannelDuplexHandler {
 
+    /**
+     * 处理数据的transport
+     */
     private final Netty4Transport transport;
     private final String profileName;
 
@@ -44,6 +48,13 @@ final class Netty4MessageChannelHandler extends ChannelDuplexHandler {
         this.profileName = profileName;
     }
 
+    /**
+     * 接收到TCP的消息
+     *
+     * @param ctx
+     * @param msg
+     * @throws Exception
+     */
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         Transports.assertTransportThread();
@@ -51,12 +62,12 @@ final class Netty4MessageChannelHandler extends ChannelDuplexHandler {
             ctx.fireChannelRead(msg);
             return;
         }
-        final ByteBuf buffer = (ByteBuf) msg;
+        final ByteBuf buffer = (ByteBuf)msg;
         final int remainingMessageSize = buffer.getInt(buffer.readerIndex() - TcpHeader.MESSAGE_LENGTH_SIZE);
         final int expectedReaderIndex = buffer.readerIndex() + remainingMessageSize;
         try {
             Channel channel = ctx.channel();
-            InetSocketAddress remoteAddress = (InetSocketAddress) channel.remoteAddress();
+            InetSocketAddress remoteAddress = (InetSocketAddress)channel.remoteAddress();
             // netty always copies a buffer, either in NioWorker in its read handler, where it copies to a fresh
             // buffer, or in the cumulative buffer, which is cleaned each time so it could be bigger than the actual size
             BytesReference reference = Netty4Utils.toBytesReference(buffer, remainingMessageSize);

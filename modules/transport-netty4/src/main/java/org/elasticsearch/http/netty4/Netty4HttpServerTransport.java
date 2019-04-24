@@ -289,7 +289,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
             serverBootstrap.group(new NioEventLoopGroup(workerCount, daemonThreadFactory(settings,
                 HTTP_SERVER_WORKER_THREAD_NAME_PREFIX)));
             serverBootstrap.channel(NioServerSocketChannel.class);
-
+            // 设置worker的handler
             serverBootstrap.childHandler(configureServerChannelHandler());
 
             serverBootstrap.childOption(ChannelOption.TCP_NODELAY, SETTING_HTTP_TCP_NO_DELAY.get(settings));
