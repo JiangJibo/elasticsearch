@@ -509,6 +509,14 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         return connectedNodes.containsKey(node);
     }
 
+    /**
+     * 链接上Node
+     *
+     * @param node
+     * @param connectionProfile
+     * @param connectionValidator
+     * @throws ConnectTransportException
+     */
     @Override
     public void connectToNode(DiscoveryNode node, ConnectionProfile connectionProfile,
                               CheckedBiConsumer<Connection, ConnectionProfile, IOException> connectionValidator)
@@ -1281,6 +1289,8 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     }
 
     /**
+     * 验证数据包是不是一个完整的包,而不是ping和非完整的包
+     *
      * Validates the first N bytes of the message header and returns <code>false</code> if the message is
      * a ping message and has no payload ie. isn't a real user level message.
      *
@@ -1295,6 +1305,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             throw new IllegalStateException("message size must be >= to the header size");
         }
         int offset = 0;
+        // 如果第一个字节不是E和S,那么要判断是不是Http请求的方法
         if (buffer.get(offset) != 'E' || buffer.get(offset + 1) != 'S') {
             // special handling for what is probably HTTP
             if (bufferStartsWith(buffer, offset, "GET ") ||

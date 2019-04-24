@@ -73,7 +73,7 @@ import static org.elasticsearch.common.settings.Setting.intSetting;
 import static org.elasticsearch.common.util.concurrent.ConcurrentCollections.newConcurrentMap;
 import static org.elasticsearch.common.util.concurrent.EsExecutors.daemonThreadFactory;
 
-/** 
+/**
  * There are 4 types of connections per node, low/med/high/ping. Low if for batch oriented APIs (like recovery or
  * batch) with high payload that will cause regular request. (like search or single index) to take
  * longer. Med is for the typical search / single doc index. And High for things like cluster state. Ping is reserved for
@@ -307,13 +307,22 @@ public class Netty4Transport extends TcpTransport {
         });
     }
 
+    /**
+     * 客户端通道初始化器
+     */
     protected class ClientChannelInitializer extends ChannelInitializer<Channel> {
 
         @Override
         protected void initChannel(Channel ch) throws Exception {
+            //注册负责记录log的handler，但是进入ESLoggingHandler具体实现
+            //可以看到其没有做日志记录操作，源码注释说明因为TcpTransport会做日志记录
             ch.pipeline().addLast("logging", new ESLoggingHandler());
+            //注册解码器，这里没有注册编码器因为编码是在TcpTransport实现的，
+            //需要发送的报文到达Channel已经是编码之后的格式了
             ch.pipeline().addLast("size", new Netty4SizeHeaderFrameDecoder());
             // using a dot as a prefix means this cannot come from any settings parsed
+            //负责对报文进行处理，主要识别是request还是response
+            //然后进行相应的处理
             ch.pipeline().addLast("dispatcher", new Netty4MessageChannelHandler(Netty4Transport.this, ".client"));
         }
 
