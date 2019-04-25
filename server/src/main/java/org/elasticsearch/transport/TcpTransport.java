@@ -1094,6 +1094,20 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         return compress && (!(request instanceof BytesTransportRequest));
     }
 
+    /**
+     * 将请求发送给Channel
+     *
+     * @param node
+     * @param channel
+     * @param requestId
+     * @param action
+     * @param request
+     * @param options
+     * @param channelVersion
+     * @param status
+     * @throws IOException
+     * @throws TransportException
+     */
     private void sendRequestToChannel(final DiscoveryNode node, final TcpChannel channel, final long requestId, final String action,
                                       final TransportRequest request, TransportRequestOptions options, Version channelVersion,
                                       byte status) throws IOException,
@@ -1126,6 +1140,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 stream.writeStringArray(features);
             }
             stream.writeString(action);
+            // 构建数据,将对象按报文格式转换为字节数组
             BytesReference message = buildMessage(requestId, status, node.getVersion(), request, stream);
             final TransportRequestOptions finalOptions = options;
             // this might be called in a different thread
@@ -1264,10 +1279,20 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     }
 
     /**
+     * 将给定的消息序列化成字节形式
      * Serializes the given message into a bytes representation
+     *
+     * @param requestId   请求id
+     * @param status      请求状态
+     * @param nodeVersion 节点版本
+     * @param message     消息
+     * @param stream      流
+     * @return
+     * @throws IOException
      */
     private BytesReference buildMessage(long requestId, byte status, Version nodeVersion, TransportMessage message,
                                         CompressibleBytesOutputStream stream) throws IOException {
+        // 零拷贝缓冲区
         final BytesReference zeroCopyBuffer;
         if (message instanceof BytesTransportRequest) { // what a shitty optimization - we should use a direct send method instead
             BytesTransportRequest bRequest = (BytesTransportRequest)message;
@@ -1284,7 +1309,9 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         // #validateRequest method. this might be a problem in deflate after all but it's important to write
         // the marker bytes.
         final BytesReference messageBody = stream.materializeBytes();
+        // 构建报文头部
         final BytesReference header = buildHeader(requestId, status, stream.getVersion(), messageBody.length() + zeroCopyBuffer.length());
+        // 构建一个组合的字节包
         return new CompositeBytesReference(header, messageBody, zeroCopyBuffer);
     }
 
@@ -1305,7 +1332,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             throw new IllegalStateException("message size must be >= to the header size");
         }
         int offset = 0;
-        // 如果第一个字节不是E和S,那么要判断是不是Http请求的方法
+        // 如果第一个字节不是E和S,那么就是非法请求
         if (buffer.get(offset) != 'E' || buffer.get(offset + 1) != 'S') {
             // special handling for what is probably HTTP
             if (bufferStartsWith(buffer, offset, "GET ") ||
@@ -1331,6 +1358,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         final int dataLen;
         try (StreamInput input = buffer.streamInput()) {
             input.skip(TcpHeader.MARKER_BYTES_SIZE);
+            // 获取报文里的数据长度
             dataLen = input.readInt();
             if (dataLen == PING_DATA_SIZE) {
                 // discard the messages we read and continue, this is achieved by skipping the bytes
@@ -1347,7 +1375,8 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             throw new IllegalArgumentException("transport content length received [" + new ByteSizeValue(dataLen) + "] exceeded ["
                 + new ByteSizeValue(NINETY_PER_HEAP_SIZE) + "]");
         }
-
+        // 如果当前接收到报文长度不过,不是一个完成的包,那么抛出一个异常, Netty4SizeHeaderFrameDecoder#decode(...) 会捕获这个异常,
+        // 不将当前消息追加到待解析的数据包数组中
         if (buffer.length() < dataLen + sizeHeaderLength) {
             throw new IllegalStateException("buffer must be >= to the message size but wasn't");
         }

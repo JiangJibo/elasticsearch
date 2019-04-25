@@ -33,13 +33,20 @@ final class Netty4SizeHeaderFrameDecoder extends ByteToMessageDecoder {
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
+            // 如果数据包超过6个字节,也就是 E+S+messageLength
             boolean continueProcessing = TcpTransport.validateMessageHeader(Netty4Utils.toBytesReference(in));
+            // buffer里跳过这6个字节
             final ByteBuf message = in.skipBytes(TcpHeader.MARKER_BYTES_SIZE + TcpHeader.MESSAGE_LENGTH_SIZE);
-            if (!continueProcessing) return;
+            if (!continueProcessing) {
+                return;
+            }
+            // 将剩余的消息追加到数组上
             out.add(message);
         } catch (IllegalArgumentException ex) {
             throw new TooLongFrameException(ex);
         } catch (IllegalStateException ex) {
+            // 在解析这个报文到末尾时,如果报文不够完整,也就是  6+dataLength > buffer剩余长度 > 6字节
+            // 通过抛出一个异常来结束这个包的数据提取
             /* decode will be called until the ByteBuf is fully consumed; when it is fully
              * consumed, transport#validateMessageHeader will throw an IllegalStateException which
              * is okay, it means we have finished consuming the ByteBuf and we can get out
