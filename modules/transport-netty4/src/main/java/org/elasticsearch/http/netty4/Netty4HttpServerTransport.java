@@ -193,6 +193,9 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
     private final int readTimeoutMillis;
 
     protected final int maxCompositeBufferComponents;
+    /**
+     * RestController实现
+     */
     private final Dispatcher dispatcher;
 
     protected volatile ServerBootstrap serverBootstrap;
@@ -504,13 +507,22 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
     void dispatchRequest(final RestRequest request, final RestChannel channel) {
         final ThreadContext threadContext = threadPool.getThreadContext();
         try (ThreadContext.StoredContext ignore = threadContext.stashContext()) {
+            // RestController转发请求
             dispatcher.dispatchRequest(request, channel, threadContext);
         }
     }
 
+    /**
+     * 处理不正常的请求
+     *
+     * @param request
+     * @param channel
+     * @param cause
+     */
     void dispatchBadRequest(final RestRequest request, final RestChannel channel, final Throwable cause) {
         final ThreadContext threadContext = threadPool.getThreadContext();
         try (ThreadContext.StoredContext ignore = threadContext.stashContext()) {
+            // RestController转发请求
             dispatcher.dispatchBadRequest(request, channel, threadContext, cause);
         }
     }
@@ -542,13 +554,24 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
         }
     }
 
+    /**
+     * 设置处理Http请求的ChannelHandler
+     *
+     * @return
+     */
     public ChannelHandler configureServerChannelHandler() {
         return new HttpChannelHandler(this, detailedErrorsEnabled, threadPool.getThreadContext());
     }
 
+    /**
+     * 处理Http请求的ChannelHandler
+     */
     protected static class HttpChannelHandler extends ChannelInitializer<Channel> {
 
         private final Netty4HttpServerTransport transport;
+        /**
+         *
+         */
         private final Netty4HttpRequestHandler requestHandler;
 
         protected HttpChannelHandler(
@@ -585,6 +608,7 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
             if (transport.pipelining) {
                 ch.pipeline().addLast("pipelining", new HttpPipeliningHandler(transport.logger, transport.pipeliningMaxEvents));
             }
+            // 将对http请求的处理类设置为左后一个ChannelHandler
             ch.pipeline().addLast("handler", requestHandler);
         }
 

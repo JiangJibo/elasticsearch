@@ -51,6 +51,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
 import static org.elasticsearch.rest.RestStatus.BAD_REQUEST;
@@ -63,6 +64,7 @@ import static org.elasticsearch.rest.BytesRestResponse.TEXT_CONTENT_TYPE;
 
 /**
  * 处理Http请求的Controller
+ * 在 {@link org.elasticsearch.action.ActionModule#initRestHandlers(Supplier)} 中注册所有的action
  */
 public class RestController extends AbstractComponent implements HttpServerTransport.Dispatcher {
 
@@ -147,6 +149,7 @@ public class RestController extends AbstractComponent implements HttpServerTrans
     }
 
     /**
+     * 在 ActionModule#initRestHandlers(java.util.function.Supplier) 中调用
      * Registers a REST handler to be executed when one of the provided methods and path match the request.
      *
      * @param path    Path to handle (e.g., "/{index}/{type}/_bulk")
@@ -336,6 +339,7 @@ public class RestController extends AbstractComponent implements HttpServerTrans
         }
 
         // Loop through all possible handlers, attempting to dispatch the request
+        // 根据path获取匹配的handler,也就是action
         Iterator<MethodHandlers> allHandlers = getAllHandlers(request);
         for (Iterator<MethodHandlers> it = allHandlers; it.hasNext(); ) {
             final Optional<RestHandler> mHandler = Optional.ofNullable(it.next()).flatMap(mh -> mh.getHandler(request.method()));
@@ -351,10 +355,17 @@ public class RestController extends AbstractComponent implements HttpServerTrans
         }
     }
 
+    /**
+     * 会根据URL过滤Action
+     *
+     * @param request
+     * @return
+     */
     Iterator<MethodHandlers> getAllHandlers(final RestRequest request) {
         // Between retrieving the correct path, we need to reset the parameters,
         // otherwise parameters are parsed out of the URI that aren't actually handled.
         final Map<String, String> originalParams = new HashMap<>(request.params());
+        // 根据path过滤url, 先严格匹配,然后根节点模糊子节点严格,然后根节点严格子节点模糊,最后所有都模糊
         return handlers.retrieveAll(getPath(request), () -> {
             // PathTrie modifies the request, so reset the params between each iteration
             request.params().clear();

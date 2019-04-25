@@ -356,7 +356,7 @@ public class ActionModule extends AbstractModule {
     public ActionModule(boolean transportClient, Settings settings, IndexNameExpressionResolver indexNameExpressionResolver,
                         IndexScopedSettings indexScopedSettings, ClusterSettings clusterSettings, SettingsFilter settingsFilter,
                         ThreadPool threadPool, List<ActionPlugin> actionPlugins, NodeClient nodeClient,
-            CircuitBreakerService circuitBreakerService, UsageService usageService) {
+                        CircuitBreakerService circuitBreakerService, UsageService usageService) {
         this.transportClient = transportClient;
         this.settings = settings;
         this.indexNameExpressionResolver = indexNameExpressionResolver;
@@ -390,7 +390,6 @@ public class ActionModule extends AbstractModule {
         }
     }
 
-
     public Map<String, ActionHandler<?, ?>> getActions() {
         return actions;
     }
@@ -398,6 +397,7 @@ public class ActionModule extends AbstractModule {
     static Map<String, ActionHandler<?, ?>> setupActions(List<ActionPlugin> actionPlugins) {
         // Subclass NamedRegistry for easy registration
         class ActionRegistry extends NamedRegistry<ActionHandler<?, ?>> {
+
             ActionRegistry() {
                 super("action");
             }
@@ -407,8 +407,8 @@ public class ActionModule extends AbstractModule {
             }
 
             public <Request extends ActionRequest, Response extends ActionResponse> void register(
-                    GenericAction<Request, Response> action, Class<? extends TransportAction<Request, Response>> transportAction,
-                    Class<?>... supportTransportActions) {
+                GenericAction<Request, Response> action, Class<? extends TransportAction<Request, Response>> transportAction,
+                Class<?>... supportTransportActions) {
                 register(new ActionHandler<>(action, transportAction, supportTransportActions));
             }
         }
@@ -457,7 +457,7 @@ public class ActionModule extends AbstractModule {
         actions.register(TypesExistsAction.INSTANCE, TransportTypesExistsAction.class);
         actions.register(GetMappingsAction.INSTANCE, TransportGetMappingsAction.class);
         actions.register(GetFieldMappingsAction.INSTANCE, TransportGetFieldMappingsAction.class,
-                TransportGetFieldMappingsIndexAction.class);
+            TransportGetFieldMappingsIndexAction.class);
         actions.register(PutMappingAction.INSTANCE, TransportPutMappingAction.class);
         actions.register(IndicesAliasesAction.INSTANCE, TransportIndicesAliasesAction.class);
         actions.register(UpdateSettingsAction.INSTANCE, TransportUpdateSettingsAction.class);
@@ -482,13 +482,13 @@ public class ActionModule extends AbstractModule {
         actions.register(GetAction.INSTANCE, TransportGetAction.class);
         actions.register(TermVectorsAction.INSTANCE, TransportTermVectorsAction.class);
         actions.register(MultiTermVectorsAction.INSTANCE, TransportMultiTermVectorsAction.class,
-                TransportShardMultiTermsVectorAction.class);
+            TransportShardMultiTermsVectorAction.class);
         actions.register(DeleteAction.INSTANCE, TransportDeleteAction.class);
         actions.register(UpdateAction.INSTANCE, TransportUpdateAction.class);
         actions.register(MultiGetAction.INSTANCE, TransportMultiGetAction.class,
-                TransportShardMultiGetAction.class);
+            TransportShardMultiGetAction.class);
         actions.register(BulkAction.INSTANCE, TransportBulkAction.class,
-                TransportShardBulkAction.class);
+            TransportShardBulkAction.class);
         actions.register(SearchAction.INSTANCE, TransportSearchAction.class);
         actions.register(SearchScrollAction.INSTANCE, TransportSearchScrollAction.class);
         actions.register(MultiSearchAction.INSTANCE, TransportMultiSearchAction.class);
@@ -525,11 +525,17 @@ public class ActionModule extends AbstractModule {
             Collections.unmodifiableSet(actionPlugins.stream().flatMap(p -> p.getActionFilters().stream()).collect(Collectors.toSet())));
     }
 
+    /**
+     * 注册所有的RestHandler
+     * 每new 一个Action就自动将其注册到了{@link #restController} 中
+     *
+     * @param nodesInCluster
+     */
     public void initRestHandlers(Supplier<DiscoveryNodes> nodesInCluster) {
         List<AbstractCatAction> catActions = new ArrayList<>();
         Consumer<RestHandler> registerHandler = a -> {
             if (a instanceof AbstractCatAction) {
-                catActions.add((AbstractCatAction) a);
+                catActions.add((AbstractCatAction)a);
             }
         };
         registerHandler.accept(new RestMainAction(settings, restController));
@@ -660,7 +666,7 @@ public class ActionModule extends AbstractModule {
         registerHandler.accept(new RestTemplatesAction(settings, restController));
         for (ActionPlugin plugin : actionPlugins) {
             for (RestHandler handler : plugin.getRestHandlers(settings, restController, clusterSettings, indexScopedSettings,
-                    settingsFilter, indexNameExpressionResolver, nodesInCluster)) {
+                settingsFilter, indexNameExpressionResolver, nodesInCluster)) {
                 registerHandler.accept(handler);
             }
         }
@@ -680,7 +686,7 @@ public class ActionModule extends AbstractModule {
             // register GenericAction -> transportAction Map used by NodeClient
             @SuppressWarnings("rawtypes")
             MapBinder<GenericAction, TransportAction> transportActionsBinder
-                    = MapBinder.newMapBinder(binder(), GenericAction.class, TransportAction.class);
+                = MapBinder.newMapBinder(binder(), GenericAction.class, TransportAction.class);
             for (ActionHandler<?, ?> action : actions.values()) {
                 // bind the action as eager singleton, so the map binder one will reuse it
                 bind(action.getTransportAction()).asEagerSingleton();

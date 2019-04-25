@@ -37,6 +37,9 @@ import static java.util.Collections.unmodifiableMap;
 
 public class PathTrie<T> {
 
+    /**
+     * 字典树匹配模式
+     */
     enum TrieMatchingMode {
         /*
          * Retrieve only explicitly mapped nodes, no wildcards are
@@ -60,9 +63,10 @@ public class PathTrie<T> {
     }
 
     static EnumSet<TrieMatchingMode> EXPLICIT_OR_ROOT_WILDCARD =
-            EnumSet.of(TrieMatchingMode.EXPLICIT_NODES_ONLY, TrieMatchingMode.WILDCARD_ROOT_NODES_ALLOWED);
+        EnumSet.of(TrieMatchingMode.EXPLICIT_NODES_ONLY, TrieMatchingMode.WILDCARD_ROOT_NODES_ALLOWED);
 
     public interface Decoder {
+
         String decode(String value);
     }
 
@@ -79,6 +83,7 @@ public class PathTrie<T> {
     }
 
     public class TrieNode {
+
         private transient String key;
         private transient T value;
         private boolean isWildcard;
@@ -125,8 +130,7 @@ public class PathTrie<T> {
         }
 
         public synchronized void insert(String[] path, int index, T value) {
-            if (index >= path.length)
-                return;
+            if (index >= path.length) { return; }
 
             String token = path[index];
             String key = token;
@@ -148,8 +152,8 @@ public class PathTrie<T> {
                  */
                 if (index == (path.length - 1)) {
                     if (node.value != null) {
-                        throw new IllegalArgumentException("Path [" + String.join("/", path)+ "] already has a value ["
-                                + node.value + "]");
+                        throw new IllegalArgumentException("Path [" + String.join("/", path) + "] already has a value ["
+                            + node.value + "]");
                     } else {
                         node.value = value;
                     }
@@ -160,8 +164,7 @@ public class PathTrie<T> {
         }
 
         public synchronized void insertOrUpdate(String[] path, int index, T value, BiFunction<T, T, T> updater) {
-            if (index >= path.length)
-                return;
+            if (index >= path.length) { return; }
 
             String token = path[index];
             String key = token;
@@ -206,8 +209,7 @@ public class PathTrie<T> {
         }
 
         public T retrieve(String[] path, int index, Map<String, String> params, TrieMatchingMode trieMatchingMode) {
-            if (index >= path.length)
-                return null;
+            if (index >= path.length) { return null; }
 
             String token = path[index];
             TrieNode node = children.get(token);
@@ -243,7 +245,7 @@ public class PathTrie<T> {
                 }
             } else {
                 if (index + 1 == path.length && node.value == null && children.get(wildcard) != null
-                        && EXPLICIT_OR_ROOT_WILDCARD.contains(trieMatchingMode) == false) {
+                    && EXPLICIT_OR_ROOT_WILDCARD.contains(trieMatchingMode) == false) {
                     /*
                      * If we are at the end of the path, the current node does not have a value but
                      * there is a child wildcard node, use the child wildcard node.
@@ -251,7 +253,7 @@ public class PathTrie<T> {
                     node = children.get(wildcard);
                     usedWildcard = true;
                 } else if (index == 1 && node.value == null && children.get(wildcard) != null
-                        && trieMatchingMode == TrieMatchingMode.WILDCARD_ROOT_NODES_ALLOWED) {
+                    && trieMatchingMode == TrieMatchingMode.WILDCARD_ROOT_NODES_ALLOWED) {
                     /*
                      * If we are at the root, and root wildcards are allowed, use the child wildcard
                      * node.
@@ -382,10 +384,12 @@ public class PathTrie<T> {
             this.path = path;
             this.trie = trie;
             this.paramSupplier = paramSupplier;
-            this.modes = new ArrayList<>(Arrays.asList(TrieMatchingMode.EXPLICIT_NODES_ONLY,
-                TrieMatchingMode.WILDCARD_ROOT_NODES_ALLOWED,
-                TrieMatchingMode.WILDCARD_LEAF_NODES_ALLOWED,
-                TrieMatchingMode.WILDCARD_NODES_ALLOWED));
+            // 匹配模式,先严格匹配,最后所有模糊匹配
+            this.modes = new ArrayList<>(Arrays.asList(
+                TrieMatchingMode.EXPLICIT_NODES_ONLY,    // 所有节点严格匹配
+                TrieMatchingMode.WILDCARD_ROOT_NODES_ALLOWED,  // root nodes 可模糊匹配
+                TrieMatchingMode.WILDCARD_LEAF_NODES_ALLOWED,  // leaf nodes 可模糊匹配
+                TrieMatchingMode.WILDCARD_NODES_ALLOWED));      // 所有节点都可模糊匹配
             assert TrieMatchingMode.values().length == 4 : "missing trie matching mode";
         }
 
@@ -401,6 +405,7 @@ public class PathTrie<T> {
             }
             TrieMatchingMode mode = modes.remove(0);
             Map<String, String> params = paramSupplier.get();
+            // 字典树根据path检索合适的节点
             return trie.retrieve(path, params, mode);
         }
     }
