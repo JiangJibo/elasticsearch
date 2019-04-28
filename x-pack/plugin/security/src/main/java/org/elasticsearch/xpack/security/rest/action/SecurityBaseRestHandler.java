@@ -43,6 +43,7 @@ public abstract class SecurityBaseRestHandler extends BaseRestHandler {
      * Note: the implementing rest handler is called before the license is checked so that we do not
      * trip the unused parameters check
      */
+    @Override
     protected final RestChannelConsumer prepareRequest(RestRequest request, NodeClient client) throws IOException {
         RestChannelConsumer consumer = innerPrepareRequest(request, client);
         final Exception failedFeature = checkFeatureAvailable(request);

@@ -155,7 +155,7 @@ public class MetaData implements Iterable<IndexMetaData>, Diffable<MetaData>, To
     private final Settings transientSettings;
     private final Settings persistentSettings;
     private final Settings settings;
-    private final ImmutableOpenMap<String, IndexMetaData> indices;
+    private final ImmutableOpenMap<String, IndexMetaData> indices;  // 索引的元数据集合
     private final ImmutableOpenMap<String, IndexTemplateMetaData> templates;
     private final ImmutableOpenMap<String, Custom> customs;
 

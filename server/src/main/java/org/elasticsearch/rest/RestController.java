@@ -214,7 +214,15 @@ public class RestController extends AbstractComponent implements HttpServerTrans
     }
 
     /**
+     * 处理请求
      * Dispatch the request, if possible, returning true if a response was sent or false otherwise.
+     *
+     * @param request
+     * @param channel
+     * @param client
+     * @param mHandler {@link BaseRestHandler#handleRequest(RestRequest, RestChannel, NodeClient)}
+     * @return
+     * @throws Exception
      */
     boolean dispatchRequest(final RestRequest request, final RestChannel channel, final NodeClient client,
                             final Optional<RestHandler> mHandler) throws Exception {

@@ -353,6 +353,9 @@ import org.elasticsearch.threadpool.ThreadPool;
 
 import java.util.Map;
 
+/**
+ * 抽象的客户端操作,默认实现{@link org.elasticsearch.client.node.NodeClient}
+ */
 public abstract class AbstractClient extends AbstractComponent implements Client {
 
     private final ThreadPool threadPool;

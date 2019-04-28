@@ -22,17 +22,18 @@ package org.elasticsearch.client;
 /**
  * Administrative actions/operations against the cluster or the indices.
  *
- *
  * @see org.elasticsearch.client.Client#admin()
  */
 public interface AdminClient {
 
     /**
+     * 集群的Admin客户端
      * A client allowing to perform actions/operations against the cluster.
      */
     ClusterAdminClient cluster();
 
     /**
+     * 索引的Admin客户端
      * A client allowing to perform actions/operations against the indices.
      */
     IndicesAdminClient indices();

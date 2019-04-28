@@ -84,6 +84,9 @@ import static java.util.Collections.emptyMap;
  */
 public class TransportBulkAction extends HandledTransportAction<BulkRequest, BulkResponse> {
 
+    /**
+     * 自动创建索引
+     */
     private final AutoCreateIndex autoCreateIndex;
     private final ClusterService clusterService;
     private final IngestService ingestService;
@@ -140,7 +143,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
 
         final long startTime = relativeTime();
         final AtomicArray<BulkItemResponse> responses = new AtomicArray<>(bulkRequest.requests.size());
-
+        // 判断是否配置为需要自动创建不存在的索引,默认true
         if (needToCheck()) {
             // Attempt to create all the indices that we're going to need during the bulk before we start.
             // Step 1: collect all the indices in the request
@@ -169,6 +172,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                     autoCreateIndices.add(index);
                 }
             }
+            //配置为自动创建不存在的索引，但是没有检测到执行request需要创建不存在的索引
             // Step 3: create all the indices that are missing, if there are any missing. start the bulk after all the creates come back.
             if (autoCreateIndices.isEmpty()) {
                 executeBulk(task, bulkRequest, startTime, listener, responses, indicesThatCannotBeCreated);
@@ -205,10 +209,14 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 }
             }
         } else {
+            //如果没有需要自动创建的索引，则直接执行具体的写操作
             executeBulk(task, bulkRequest, startTime, listener, responses, emptyMap());
         }
     }
 
+    /**
+     * @return 默认true
+     */
     boolean needToCheck() {
         return autoCreateIndex.needToCheck();
     }
@@ -268,11 +276,14 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
 
         @Override
         protected void doRun() throws Exception {
+            // 获取集群状态
             final ClusterState clusterState = observer.setAndGetObservedState();
+            // 处理集群被阻塞的问题
             if (handleBlockExceptions(clusterState)) {
                 return;
             }
             final ConcreteIndices concreteIndices = new ConcreteIndices(clusterState, indexNameExpressionResolver);
+            // 集群的元数据信息
             MetaData metaData = clusterState.metaData();
             for (int i = 0; i < bulkRequest.requests.size(); i++) {
                 DocWriteRequest docWriteRequest = bulkRequest.requests.get(i);
@@ -280,19 +291,25 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 if (docWriteRequest == null) {
                     continue;
                 }
+                // 如果索引不能被创建,添加失败相应
                 if (addFailureIfIndexIsUnavailable(docWriteRequest, i, concreteIndices, metaData)) {
                     continue;
                 }
+                // 获取某个要操作的索引
                 Index concreteIndex = concreteIndices.resolveIfAbsent(docWriteRequest);
                 try {
                     switch (docWriteRequest.opType()) {
                         case CREATE:
                         case INDEX:
                             IndexRequest indexRequest = (IndexRequest) docWriteRequest;
+                            // 获取索引的元数据
                             final IndexMetaData indexMetaData = metaData.index(concreteIndex);
+                            // 获取索引 type 的映射
                             MappingMetaData mappingMd = indexMetaData.mappingOrDefault(indexRequest.type());
                             Version indexCreated = indexMetaData.getCreationVersion();
+                            // 处理路由
                             indexRequest.resolveRouting(metaData);
+                            // 如果当前请求没有指定id,那么随机生成一个id
                             indexRequest.process(indexCreated, mappingMd, concreteIndex.getName());
                             break;
                         case UPDATE:
@@ -324,6 +341,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                     continue;
                 }
                 String concreteIndex = concreteIndices.getConcreteIndex(request.index()).getName();
+                // 路由到指定分片
                 ShardId shardId = clusterService.operationRouting().indexShards(clusterState, concreteIndex, request.id(), request.routing()).shardId();
                 List<BulkItemRequest> shardRequests = requestsByShard.computeIfAbsent(shardId, shard -> new ArrayList<>());
                 shardRequests.add(new BulkItemRequest(i, request));
@@ -385,6 +403,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
         private boolean handleBlockExceptions(ClusterState state) {
             ClusterBlockException blockException = state.blocks().globalBlockedException(ClusterBlockLevel.WRITE);
             if (blockException != null) {
+                // 重试
                 if (blockException.retryable()) {
                     logger.trace("cluster is blocked, scheduling a retry", blockException);
                     retry(blockException);
@@ -403,6 +422,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 onFailure(failure);
                 return;
             }
+            // 等待集群状态变更
             observer.waitForNextChange(new ClusterStateObserver.Listener() {
                 @Override
                 public void onNewClusterState(ClusterState state) {
