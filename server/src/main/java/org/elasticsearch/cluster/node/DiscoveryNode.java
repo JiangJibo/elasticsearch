@@ -38,7 +38,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Predicate;
 
-
 /**
  * A discovery node represents a node that is part of the cluster.
  */
@@ -49,7 +48,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
         if (localStorageEnable == false &&
             (Node.NODE_DATA_SETTING.get(settings) ||
                 Node.NODE_MASTER_SETTING.get(settings))
-            ) {
+        ) {
             // TODO: make this a proper setting validation logic, requiring multi-settings validation
             throw new IllegalArgumentException("storage can not be disabled for master and data nodes");
         }
@@ -76,8 +75,10 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
     private final TransportAddress address;
     private final Map<String, String> attributes;
     private final Version version;
+    /**
+     * 当前节点的角色标识
+     */
     private final Set<Role> roles;
-
 
     /**
      * Creates a new {@link DiscoveryNode}
@@ -88,9 +89,9 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
      * and updated.
      * </p>
      *
-     * @param id               the nodes unique (persistent) node id. This constructor will auto generate a random ephemeral id.
-     * @param address          the nodes transport address
-     * @param version          the version of the node
+     * @param id      the nodes unique (persistent) node id. This constructor will auto generate a random ephemeral id.
+     * @param address the nodes transport address
+     * @param version the version of the node
      */
     public DiscoveryNode(final String id, TransportAddress address, Version version) {
         this(id, address, Collections.emptyMap(), EnumSet.allOf(Role.class), version);
@@ -105,11 +106,11 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
      * and updated.
      * </p>
      *
-     * @param id               the nodes unique (persistent) node id. This constructor will auto generate a random ephemeral id.
-     * @param address          the nodes transport address
-     * @param attributes       node attributes
-     * @param roles            node roles
-     * @param version          the version of the node
+     * @param id         the nodes unique (persistent) node id. This constructor will auto generate a random ephemeral id.
+     * @param address    the nodes transport address
+     * @param attributes node attributes
+     * @param roles      node roles
+     * @param version    the version of the node
      */
     public DiscoveryNode(String id, TransportAddress address, Map<String, String> attributes, Set<Role> roles,
                          Version version) {
@@ -125,12 +126,12 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
      * and updated.
      * </p>
      *
-     * @param nodeName         the nodes name
-     * @param nodeId           the nodes unique persistent id. An ephemeral id will be auto generated.
-     * @param address          the nodes transport address
-     * @param attributes       node attributes
-     * @param roles            node roles
-     * @param version          the version of the node
+     * @param nodeName   the nodes name
+     * @param nodeId     the nodes unique persistent id. An ephemeral id will be auto generated.
+     * @param address    the nodes transport address
+     * @param attributes node attributes
+     * @param roles      node roles
+     * @param version    the version of the node
      */
     public DiscoveryNode(String nodeName, String nodeId, TransportAddress address,
                          Map<String, String> attributes, Set<Role> roles, Version version) {
@@ -147,14 +148,14 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
      * and updated.
      * </p>
      *
-     * @param nodeName         the nodes name
-     * @param nodeId           the nodes unique persistent id
-     * @param ephemeralId      the nodes unique ephemeral id
-     * @param hostAddress      the nodes host address
-     * @param address          the nodes transport address
-     * @param attributes       node attributes
-     * @param roles            node roles
-     * @param version          the version of the node
+     * @param nodeName    the nodes name
+     * @param nodeId      the nodes unique persistent id
+     * @param ephemeralId the nodes unique ephemeral id
+     * @param hostAddress the nodes host address
+     * @param address     the nodes transport address
+     * @param attributes  node attributes
+     * @param roles       node roles
+     * @param version     the version of the node
      */
     public DiscoveryNode(String nodeName, String nodeId, String ephemeralId, String hostName, String hostAddress,
                          TransportAddress address, Map<String, String> attributes, Set<Role> roles, Version version) {
@@ -175,7 +176,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
         }
         this.attributes = Collections.unmodifiableMap(attributes);
         //verify that no node roles are being provided as attributes
-        Predicate<Map<String, String>> predicate =  (attrs) -> {
+        Predicate<Map<String, String>> predicate = (attrs) -> {
             for (Role role : Role.values()) {
                 assert attrs.containsKey(role.getRoleName()) == false;
             }
@@ -187,14 +188,18 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
         this.roles = Collections.unmodifiableSet(rolesSet);
     }
 
-    /** Creates a DiscoveryNode representing the local node. */
+    /**
+     * Creates a DiscoveryNode representing the local node.
+     */
     public static DiscoveryNode createLocal(Settings settings, TransportAddress publishAddress, String nodeId) {
         Map<String, String> attributes = Node.NODE_ATTRIBUTES.getAsMap(settings);
         Set<Role> roles = getRolesFromSettings(settings);
         return new DiscoveryNode(Node.NODE_NAME_SETTING.get(settings), nodeId, publishAddress, attributes, roles, Version.CURRENT);
     }
 
-    /** extract node roles from the given settings */
+    /**
+     * extract node roles from the given settings
+     */
     public static Set<Role> getRolesFromSettings(Settings settings) {
         Set<Role> roles = EnumSet.noneOf(Role.class);
         if (Node.NODE_INGEST_SETTING.get(settings)) {
@@ -211,6 +216,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
 
     /**
      * Creates a new {@link DiscoveryNode} by reading from the stream provided as argument
+     *
      * @param in the stream
      * @throws IOException if there is an error while reading from the stream
      */
@@ -315,6 +321,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
     }
 
     /**
+     * 当前节点角色是否含有INGEST标识
      * Returns a boolean that tells whether this an ingest node or not
      */
     public boolean isIngestNode() {
@@ -350,7 +357,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
             return false;
         }
 
-        DiscoveryNode that = (DiscoveryNode) o;
+        DiscoveryNode that = (DiscoveryNode)o;
 
         return ephemeralId.equals(that.ephemeralId);
     }

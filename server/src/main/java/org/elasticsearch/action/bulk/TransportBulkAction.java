@@ -102,10 +102,10 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                                ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver,
                                AutoCreateIndex autoCreateIndex) {
         this(settings, threadPool, transportService, clusterService, ingestService,
-                shardBulkAction, createIndexAction,
-                actionFilters, indexNameExpressionResolver,
-                autoCreateIndex,
-                System::nanoTime);
+            shardBulkAction, createIndexAction,
+            actionFilters, indexNameExpressionResolver,
+            autoCreateIndex,
+            System::nanoTime);
     }
 
     public TransportBulkAction(Settings settings, ThreadPool threadPool, TransportService transportService,
@@ -132,15 +132,19 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
 
     @Override
     protected void doExecute(Task task, BulkRequest bulkRequest, ActionListener<BulkResponse> listener) {
+        // 当前Index请求是不是一个ingest请求,数据需要经过预处理后才会真正被处理。预处理后 pipeline 标识会被删除,也就是数据不会被预处理两次
+        // 先执行ingest预处理,抹去pipeline标识,然后再调用此方法做实际处理
         if (bulkRequest.hasIndexRequestsWithPipelines()) {
+            // 如果当前节点是个ingest节点
             if (clusterService.localNode().isIngestNode()) {
                 processBulkIndexIngestRequest(task, bulkRequest, listener);
             } else {
+                // 如果不是ingest节点,那么将此请求先转发给ingest节点
                 ingestForwarder.forwardIngestRequest(BulkAction.INSTANCE, bulkRequest, listener);
             }
             return;
         }
-
+        // 如果这批请求没有指定ingest
         final long startTime = relativeTime();
         final AtomicArray<BulkItemResponse> responses = new AtomicArray<>(bulkRequest.requests.size());
         // 判断是否配置为需要自动创建不存在的索引,默认true
@@ -148,11 +152,11 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             // Attempt to create all the indices that we're going to need during the bulk before we start.
             // Step 1: collect all the indices in the request
             final Set<String> indices = bulkRequest.requests.stream()
-                    // delete requests should not attempt to create the index (if the index does not
-                    // exists), unless an external versioning is used
-                .filter(request -> request.opType() != DocWriteRequest.OpType.DELETE 
-                        || request.versionType() == VersionType.EXTERNAL 
-                        || request.versionType() == VersionType.EXTERNAL_GTE)
+                // delete requests should not attempt to create the index (if the index does not
+                // exists), unless an external versioning is used
+                .filter(request -> request.opType() != DocWriteRequest.OpType.DELETE
+                    || request.versionType() == VersionType.EXTERNAL
+                    || request.versionType() == VersionType.EXTERNAL_GTE)
                 .map(DocWriteRequest::index)
                 .collect(Collectors.toSet());
             /* Step 2: filter that to indices that don't exist and we can create. At the same time build a map of indices we can't create
@@ -248,8 +252,9 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
     /**
      * retries on retryable cluster blocks, resolves item requests,
      * constructs shard bulk requests and delegates execution to shard bulk action
-     * */
+     */
     private final class BulkOperation extends AbstractRunnable {
+
         private final Task task;
         private final BulkRequest bulkRequest;
         private final ActionListener<BulkResponse> listener;
@@ -259,7 +264,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
         private final Map<String, IndexNotFoundException> indicesThatCannotBeCreated;
 
         BulkOperation(Task task, BulkRequest bulkRequest, ActionListener<BulkResponse> listener, AtomicArray<BulkItemResponse> responses,
-                long startTimeNanos, Map<String, IndexNotFoundException> indicesThatCannotBeCreated) {
+                      long startTimeNanos, Map<String, IndexNotFoundException> indicesThatCannotBeCreated) {
             this.task = task;
             this.bulkRequest = bulkRequest;
             this.listener = listener;
@@ -301,7 +306,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                     switch (docWriteRequest.opType()) {
                         case CREATE:
                         case INDEX:
-                            IndexRequest indexRequest = (IndexRequest) docWriteRequest;
+                            IndexRequest indexRequest = (IndexRequest)docWriteRequest;
                             // 获取索引的元数据
                             final IndexMetaData indexMetaData = metaData.index(concreteIndex);
                             // 获取索引 type 的映射
@@ -313,7 +318,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                             indexRequest.process(indexCreated, mappingMd, concreteIndex.getName());
                             break;
                         case UPDATE:
-                            TransportUpdateAction.resolveAndValidateRouting(metaData, concreteIndex.getName(), (UpdateRequest) docWriteRequest);
+                            TransportUpdateAction.resolveAndValidateRouting(metaData, concreteIndex.getName(), (UpdateRequest)docWriteRequest);
                             break;
                         case DELETE:
                             docWriteRequest.routing(metaData.resolveIndexRouting(docWriteRequest.parent(), docWriteRequest.routing(), docWriteRequest.index()));
@@ -322,7 +327,8 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                                 throw new RoutingMissingException(concreteIndex.getName(), docWriteRequest.type(), docWriteRequest.id());
                             }
                             break;
-                        default: throw new AssertionError("request type not supported: [" + docWriteRequest.opType() + "]");
+                        default:
+                            throw new AssertionError("request type not supported: [" + docWriteRequest.opType() + "]");
                     }
                 } catch (ElasticsearchParseException | IllegalArgumentException | RoutingMissingException e) {
                     BulkItemResponse.Failure failure = new BulkItemResponse.Failure(concreteIndex.getName(), docWriteRequest.type(), docWriteRequest.id(), e);
@@ -334,6 +340,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             }
 
             // first, go over all the requests and create a ShardId -> Operations mapping
+            // 分片和其上对应的请求
             Map<ShardId, List<BulkItemRequest>> requestsByShard = new HashMap<>();
             for (int i = 0; i < bulkRequest.requests.size(); i++) {
                 DocWriteRequest request = bulkRequest.requests.get(i);
@@ -343,6 +350,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 String concreteIndex = concreteIndices.getConcreteIndex(request.index()).getName();
                 // 路由到指定分片
                 ShardId shardId = clusterService.operationRouting().indexShards(clusterState, concreteIndex, request.id(), request.routing()).shardId();
+                // 如果此分片还没有请求,那么map里创建一个集合
                 List<BulkItemRequest> shardRequests = requestsByShard.computeIfAbsent(shardId, shard -> new ArrayList<>());
                 shardRequests.add(new BulkItemRequest(i, request));
             }
@@ -353,13 +361,16 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             }
 
             final AtomicInteger counter = new AtomicInteger(requestsByShard.size());
+            // 当前节点的id
             String nodeId = clusterService.localNode().getId();
             for (Map.Entry<ShardId, List<BulkItemRequest>> entry : requestsByShard.entrySet()) {
                 final ShardId shardId = entry.getKey();
                 final List<BulkItemRequest> requests = entry.getValue();
                 BulkShardRequest bulkShardRequest = new BulkShardRequest(shardId, bulkRequest.getRefreshPolicy(),
-                        requests.toArray(new BulkItemRequest[requests.size()]));
+                    requests.toArray(new BulkItemRequest[requests.size()]));
+                // 要等待分片的几个slave也操作好
                 bulkShardRequest.waitForActiveShards(bulkRequest.waitForActiveShards());
+                // 请求超时
                 bulkShardRequest.timeout(bulkRequest.timeout());
                 if (task != null) {
                     bulkShardRequest.setParentTask(nodeId, task.getId());
@@ -372,9 +383,12 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                             if (bulkItemResponse.getResponse() != null) {
                                 bulkItemResponse.getResponse().setShardInfo(bulkShardResponse.getShardInfo());
                             }
+                            // 按照请求的id设置相应顺序
                             responses.set(bulkItemResponse.getItemId(), bulkItemResponse);
                         }
+                        // 如果所有请求都有了相应
                         if (counter.decrementAndGet() == 0) {
+                            // 将结果返回给客户端
                             finishHim();
                         }
                     }
@@ -386,7 +400,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                             final String indexName = concreteIndices.getConcreteIndex(request.index()).getName();
                             DocWriteRequest docWriteRequest = request.request();
                             responses.set(request.id(), new BulkItemResponse(request.id(), docWriteRequest.opType(),
-                                    new BulkItemResponse.Failure(indexName, docWriteRequest.type(), docWriteRequest.id(), e)));
+                                new BulkItemResponse.Failure(indexName, docWriteRequest.type(), docWriteRequest.id(), e)));
                         }
                         if (counter.decrementAndGet() == 0) {
                             finishHim();
@@ -443,7 +457,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
         }
 
         private boolean addFailureIfIndexIsUnavailable(DocWriteRequest request, int idx, final ConcreteIndices concreteIndices,
-                final MetaData metaData) {
+                                                       final MetaData metaData) {
             IndexNotFoundException cannotCreate = indicesThatCannotBeCreated.get(request.index());
             if (cannotCreate != null) {
                 addFailure(request, idx, cannotCreate);
@@ -468,7 +482,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
 
         private void addFailure(DocWriteRequest request, int idx, Exception unavailableException) {
             BulkItemResponse.Failure failure = new BulkItemResponse.Failure(request.index(), request.type(), request.id(),
-                    unavailableException);
+                unavailableException);
             BulkItemResponse bulkItemResponse = new BulkItemResponse(idx, request.opType(), failure);
             responses.set(idx, bulkItemResponse);
             // make sure the request gets never processed again
@@ -477,11 +491,12 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
     }
 
     void executeBulk(Task task, final BulkRequest bulkRequest, final long startTimeNanos, final ActionListener<BulkResponse> listener,
-            final AtomicArray<BulkItemResponse> responses, Map<String, IndexNotFoundException> indicesThatCannotBeCreated) {
+                     final AtomicArray<BulkItemResponse> responses, Map<String, IndexNotFoundException> indicesThatCannotBeCreated) {
         new BulkOperation(task, bulkRequest, listener, responses, startTimeNanos, indicesThatCannotBeCreated).run();
     }
 
-    private static class ConcreteIndices  {
+    private static class ConcreteIndices {
+
         private final ClusterState state;
         private final IndexNameExpressionResolver indexNameExpressionResolver;
         private final Map<String, Index> indices = new HashMap<>();
@@ -509,9 +524,17 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
         return relativeTimeProvider.getAsLong();
     }
 
+    /**
+     * 处理批量索引请求,且做ingest预处理
+     *
+     * @param task
+     * @param original
+     * @param listener
+     */
     void processBulkIndexIngestRequest(Task task, BulkRequest original, ActionListener<BulkResponse> listener) {
         long ingestStartTimeInNanos = System.nanoTime();
         BulkRequestModifier bulkRequestModifier = new BulkRequestModifier(original);
+        // 获取ingest管道处理服务执行批量请求
         ingestService.getPipelineExecutionService().executeBulkRequest(() -> bulkRequestModifier, (indexRequest, exception) -> {
             logger.debug(() -> new ParameterizedMessage("failed to execute pipeline [{}] for document [{}/{}/{}]",
                 indexRequest.getPipeline(), indexRequest.index(), indexRequest.type(), indexRequest.id()), exception);
@@ -520,7 +543,9 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
             if (exception != null) {
                 logger.error("failed to execute pipeline for a bulk request", exception);
                 listener.onFailure(exception);
-            } else {
+            }
+            // 如果数据预处理成功,也就是没有异常
+            else {
                 long ingestTookInMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - ingestStartTimeInNanos);
                 BulkRequest bulkRequest = bulkRequestModifier.getBulkRequest();
                 ActionListener<BulkResponse> actionListener = bulkRequestModifier.wrapActionListenerIfNeeded(ingestTookInMillis, listener);
@@ -530,6 +555,7 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                     // (this will happen if pre-processing all items in the bulk failed)
                     actionListener.onResponse(new BulkResponse(new BulkItemResponse[0], 0));
                 } else {
+                    // 回调之前的函数,因为pipeline标识以被删除,此时会执行实际处理,且request内的数据已经被处理过了
                     doExecute(task, bulkRequest, actionListener);
                 }
             }
@@ -587,16 +613,16 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
         ActionListener<BulkResponse> wrapActionListenerIfNeeded(long ingestTookInMillis, ActionListener<BulkResponse> actionListener) {
             if (itemResponses.isEmpty()) {
                 return ActionListener.wrap(
-                        response -> actionListener.onResponse(new BulkResponse(response.getItems(),
-                                response.getTook().getMillis(), ingestTookInMillis)),
-                        actionListener::onFailure);
+                    response -> actionListener.onResponse(new BulkResponse(response.getItems(),
+                        response.getTook().getMillis(), ingestTookInMillis)),
+                    actionListener::onFailure);
             } else {
                 return new IngestBulkResponseListener(ingestTookInMillis, originalSlots, itemResponses, actionListener);
             }
         }
 
         void markCurrentItemAsFailed(Exception e) {
-            IndexRequest indexRequest = (IndexRequest) bulkRequest.requests().get(currentSlot);
+            IndexRequest indexRequest = (IndexRequest)bulkRequest.requests().get(currentSlot);
             // We hit a error during preprocessing a request, so we:
             // 1) Remember the request item slot from the bulk, so that we're done processing all requests we know what failed
             // 2) Add a bulk item failure for this request
@@ -615,7 +641,8 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
         private final List<BulkItemResponse> itemResponses;
         private final ActionListener<BulkResponse> actionListener;
 
-        IngestBulkResponseListener(long ingestTookInMillis, int[] originalSlots, List<BulkItemResponse> itemResponses, ActionListener<BulkResponse> actionListener) {
+        IngestBulkResponseListener(long ingestTookInMillis, int[] originalSlots, List<BulkItemResponse> itemResponses,
+                                   ActionListener<BulkResponse> actionListener) {
             this.ingestTookInMillis = ingestTookInMillis;
             this.itemResponses = itemResponses;
             this.actionListener = actionListener;
@@ -629,8 +656,8 @@ public class TransportBulkAction extends HandledTransportAction<BulkRequest, Bul
                 itemResponses.add(originalSlots[i], response.getItems()[i]);
             }
             actionListener.onResponse(new BulkResponse(
-                    itemResponses.toArray(new BulkItemResponse[itemResponses.size()]),
-                    response.getTook().getMillis(), ingestTookInMillis));
+                itemResponses.toArray(new BulkItemResponse[itemResponses.size()]),
+                response.getTook().getMillis(), ingestTookInMillis));
         }
 
         @Override

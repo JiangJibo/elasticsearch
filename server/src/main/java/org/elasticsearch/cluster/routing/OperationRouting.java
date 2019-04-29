@@ -47,8 +47,8 @@ import java.util.stream.Collectors;
 public class OperationRouting extends AbstractComponent {
 
     public static final Setting<Boolean> USE_ADAPTIVE_REPLICA_SELECTION_SETTING =
-            Setting.boolSetting("cluster.routing.use_adaptive_replica_selection", false,
-                    Setting.Property.Dynamic, Setting.Property.NodeScope);
+        Setting.boolSetting("cluster.routing.use_adaptive_replica_selection", false,
+            Setting.Property.Dynamic, Setting.Property.NodeScope);
 
     private List<String> awarenessAttributes;
     private boolean useAdaptiveReplicaSelection;
@@ -70,12 +70,22 @@ public class OperationRouting extends AbstractComponent {
         this.awarenessAttributes = awarenessAttributes;
     }
 
+    /**
+     * 得到要操作的分片
+     *
+     * @param clusterState
+     * @param index
+     * @param id
+     * @param routing
+     * @return
+     */
     public ShardIterator indexShards(ClusterState clusterState, String index, String id, @Nullable String routing) {
         return shards(clusterState, index, id, routing).shardsIt();
     }
 
     public ShardIterator getShards(ClusterState clusterState, String index, String id, @Nullable String routing, @Nullable String preference) {
-        return preferenceActiveShardIterator(shards(clusterState, index, id, routing), clusterState.nodes().getLocalNodeId(), clusterState.nodes(), preference, null, null);
+        return preferenceActiveShardIterator(shards(clusterState, index, id, routing), clusterState.nodes().getLocalNodeId(), clusterState.nodes(), preference,
+            null, null);
     }
 
     public ShardIterator getShards(ClusterState clusterState, String index, int shardId, @Nullable String preference) {
@@ -90,7 +100,6 @@ public class OperationRouting extends AbstractComponent {
         return searchShards(clusterState, concreteIndices, routing, preference, null, null);
     }
 
-
     public GroupShardsIterator<ShardIterator> searchShards(ClusterState clusterState,
                                                            String[] concreteIndices,
                                                            @Nullable Map<String, Set<String>> routing,
@@ -101,7 +110,7 @@ public class OperationRouting extends AbstractComponent {
         final Set<ShardIterator> set = new HashSet<>(shards.size());
         for (IndexShardRoutingTable shard : shards) {
             ShardIterator iterator = preferenceActiveShardIterator(shard,
-                    clusterState.nodes().getLocalNodeId(), clusterState.nodes(), preference, collectorService, nodeCounts);
+                clusterState.nodes().getLocalNodeId(), clusterState.nodes(), preference, collectorService, nodeCounts);
             if (iterator != null) {
                 set.add(iterator);
             }
@@ -193,9 +202,9 @@ public class OperationRouting extends AbstractComponent {
             switch (preferenceType) {
                 case PREFER_NODES:
                     final Set<String> nodesIds =
-                            Arrays.stream(
-                                    preference.substring(Preference.PREFER_NODES.type().length() + 1).split(",")
-                            ).collect(Collectors.toSet());
+                        Arrays.stream(
+                            preference.substring(Preference.PREFER_NODES.type().length() + 1).split(",")
+                        ).collect(Collectors.toSet());
                     return indexShard.preferNodeActiveInitializingShardsIt(nodesIds);
                 case LOCAL:
                     return indexShard.preferNodeActiveInitializingShardsIt(Collections.singleton(localNodeId));
@@ -276,18 +285,27 @@ public class OperationRouting extends AbstractComponent {
         return new ShardId(indexMetaData.getIndex(), generateShardId(indexMetaData, id, routing));
     }
 
+    /**
+     * 生成分片id
+     *
+     * @param indexMetaData
+     * @param id            请求id
+     * @param routing
+     * @return
+     */
     public static int generateShardId(IndexMetaData indexMetaData, @Nullable String id, @Nullable String routing) {
         final String effectiveRouting;
         final int partitionOffset;
 
         if (routing == null) {
-            assert(indexMetaData.isRoutingPartitionedIndex() == false) : "A routing value is required for gets from a partitioned index";
+            assert (indexMetaData.isRoutingPartitionedIndex() == false) : "A routing value is required for gets from a partitioned index";
             effectiveRouting = id;
         } else {
             effectiveRouting = routing;
         }
-
+        // 如果可路由的分区数量 != 1
         if (indexMetaData.isRoutingPartitionedIndex()) {
+            // Math.floorMod == %
             partitionOffset = Math.floorMod(Murmur3HashFunction.hash(id), indexMetaData.getRoutingPartitionSize());
         } else {
             // we would have still got 0 above but this check just saves us an unnecessary hash calculation
@@ -297,6 +315,14 @@ public class OperationRouting extends AbstractComponent {
         return calculateScaledShardId(indexMetaData, effectiveRouting, partitionOffset);
     }
 
+    /**
+     * 计算分片id
+     *
+     * @param indexMetaData
+     * @param effectiveRouting
+     * @param partitionOffset
+     * @return
+     */
     private static int calculateScaledShardId(IndexMetaData indexMetaData, String effectiveRouting, int partitionOffset) {
         final int hash = Murmur3HashFunction.hash(effectiveRouting) + partitionOffset;
 

@@ -63,9 +63,11 @@ import static org.elasticsearch.action.ValidateActions.addValidationError;
  * and allows to executes it in a single batch.
  *
  * Note that we only support refresh on the bulk request not per item.
+ *
  * @see org.elasticsearch.client.Client#bulk(BulkRequest)
  */
 public class BulkRequest extends ActionRequest implements CompositeIndicesRequest, WriteRequest<BulkRequest> {
+
     private static final DeprecationLogger DEPRECATION_LOGGER =
         new DeprecationLogger(Loggers.getLogger(BulkRequest.class));
 
@@ -118,17 +120,18 @@ public class BulkRequest extends ActionRequest implements CompositeIndicesReques
 
     /**
      * Add a request to the current BulkRequest.
+     *
      * @param request Request to add
      * @param payload Optional payload
      * @return the current bulk request
      */
     public BulkRequest add(DocWriteRequest request, @Nullable Object payload) {
         if (request instanceof IndexRequest) {
-            add((IndexRequest) request, payload);
+            add((IndexRequest)request, payload);
         } else if (request instanceof DeleteRequest) {
-            add((DeleteRequest) request, payload);
+            add((DeleteRequest)request, payload);
         } else if (request instanceof UpdateRequest) {
-            add((UpdateRequest) request, payload);
+            add((UpdateRequest)request, payload);
         } else {
             throw new IllegalArgumentException("No support for request [" + request + "]");
         }
@@ -291,7 +294,7 @@ public class BulkRequest extends ActionRequest implements CompositeIndicesReques
 
     public BulkRequest add(BytesReference data, @Nullable String defaultIndex, @Nullable String defaultType, @Nullable String
         defaultRouting, @Nullable String[] defaultFields, @Nullable FetchSourceContext defaultFetchSourceContext, @Nullable String
-        defaultPipeline, @Nullable Object payload, boolean allowExplicitIndex, XContentType xContentType) throws IOException {
+                               defaultPipeline, @Nullable Object payload, boolean allowExplicitIndex, XContentType xContentType) throws IOException {
         XContent xContent = xContentType.xContent();
         int line = 0;
         int from = 0;
@@ -352,7 +355,7 @@ public class BulkRequest extends ActionRequest implements CompositeIndicesReques
                         if (token == XContentParser.Token.FIELD_NAME) {
                             currentFieldName = parser.currentName();
                         } else if (token.isValue()) {
-                            if (INDEX.match(currentFieldName, parser.getDeprecationHandler())){
+                            if (INDEX.match(currentFieldName, parser.getDeprecationHandler())) {
                                 if (!allowExplicitIndex) {
                                     throw new IllegalArgumentException("explicit index in bulk is not allowed");
                                 }
@@ -376,11 +379,13 @@ public class BulkRequest extends ActionRequest implements CompositeIndicesReques
                             } else if (PIPELINE.match(currentFieldName, parser.getDeprecationHandler())) {
                                 pipeline = parser.text();
                             } else if (FIELDS.match(currentFieldName, parser.getDeprecationHandler())) {
-                                throw new IllegalArgumentException("Action/metadata line [" + line + "] contains a simple value for parameter [fields] while a list is expected");
+                                throw new IllegalArgumentException(
+                                    "Action/metadata line [" + line + "] contains a simple value for parameter [fields] while a list is expected");
                             } else if (SOURCE.match(currentFieldName, parser.getDeprecationHandler())) {
                                 fetchSourceContext = FetchSourceContext.fromXContent(parser);
                             } else {
-                                throw new IllegalArgumentException("Action/metadata line [" + line + "] contains an unknown parameter [" + currentFieldName + "]");
+                                throw new IllegalArgumentException(
+                                    "Action/metadata line [" + line + "] contains an unknown parameter [" + currentFieldName + "]");
                             }
                         } else if (token == XContentParser.Token.START_ARRAY) {
                             if (FIELDS.match(currentFieldName, parser.getDeprecationHandler())) {
@@ -388,17 +393,21 @@ public class BulkRequest extends ActionRequest implements CompositeIndicesReques
                                 List<Object> values = parser.list();
                                 fields = values.toArray(new String[values.size()]);
                             } else {
-                                throw new IllegalArgumentException("Malformed action/metadata line [" + line + "], expected a simple value for field [" + currentFieldName + "] but found [" + token + "]");
+                                throw new IllegalArgumentException(
+                                    "Malformed action/metadata line [" + line + "], expected a simple value for field [" + currentFieldName + "] but found ["
+                                        + token + "]");
                             }
                         } else if (token == XContentParser.Token.START_OBJECT && SOURCE.match(currentFieldName, parser.getDeprecationHandler())) {
                             fetchSourceContext = FetchSourceContext.fromXContent(parser);
                         } else if (token != XContentParser.Token.VALUE_NULL) {
-                            throw new IllegalArgumentException("Malformed action/metadata line [" + line + "], expected a simple value for field [" + currentFieldName + "] but found [" + token + "]");
+                            throw new IllegalArgumentException(
+                                "Malformed action/metadata line [" + line + "], expected a simple value for field [" + currentFieldName + "] but found ["
+                                    + token + "]");
                         }
                     }
                 } else if (token != XContentParser.Token.END_OBJECT) {
                     throw new IllegalArgumentException("Malformed action/metadata line [" + line + "], expected " + XContentParser.Token.START_OBJECT
-                            + " or " + XContentParser.Token.END_OBJECT + " but found [" + token + "]");
+                        + " or " + XContentParser.Token.END_OBJECT + " but found [" + token + "]");
                 }
 
                 if ("delete".equals(action)) {
@@ -415,22 +424,22 @@ public class BulkRequest extends ActionRequest implements CompositeIndicesReques
                     if ("index".equals(action)) {
                         if (opType == null) {
                             internalAdd(new IndexRequest(index, type, id).routing(routing).parent(parent).version(version).versionType(versionType)
-                                    .setPipeline(pipeline)
-                                    .source(sliceTrimmingCarriageReturn(data, from, nextMarker,xContentType), xContentType), payload);
+                                .setPipeline(pipeline)
+                                .source(sliceTrimmingCarriageReturn(data, from, nextMarker, xContentType), xContentType), payload);
                         } else {
                             internalAdd(new IndexRequest(index, type, id).routing(routing).parent(parent).version(version).versionType(versionType)
-                                    .create("create".equals(opType)).setPipeline(pipeline)
-                                    .source(sliceTrimmingCarriageReturn(data, from, nextMarker, xContentType), xContentType), payload);
+                                .create("create".equals(opType)).setPipeline(pipeline)
+                                .source(sliceTrimmingCarriageReturn(data, from, nextMarker, xContentType), xContentType), payload);
                         }
                     } else if ("create".equals(action)) {
                         internalAdd(new IndexRequest(index, type, id).routing(routing).parent(parent).version(version).versionType(versionType)
-                                .create(true).setPipeline(pipeline)
-                                .source(sliceTrimmingCarriageReturn(data, from, nextMarker, xContentType), xContentType), payload);
+                            .create(true).setPipeline(pipeline)
+                            .source(sliceTrimmingCarriageReturn(data, from, nextMarker, xContentType), xContentType), payload);
                     } else if ("update".equals(action)) {
                         UpdateRequest updateRequest = new UpdateRequest(index, type, id).routing(routing).parent(parent).retryOnConflict(retryOnConflict)
-                                .version(version).versionType(versionType)
-                                .routing(routing)
-                                .parent(parent);
+                            .version(version).versionType(versionType)
+                            .routing(routing)
+                            .parent(parent);
                         // EMPTY is safe here because we never call namedObject
                         try (InputStream dataStream = sliceTrimmingCarriageReturn(data, from, nextMarker, xContentType).streamInput();
                              XContentParser sliceParser = xContent.createParser(NamedXContentRegistry.EMPTY,
@@ -472,7 +481,7 @@ public class BulkRequest extends ActionRequest implements CompositeIndicesReques
      */
     private BytesReference sliceTrimmingCarriageReturn(BytesReference bytesReference, int from, int nextMarker, XContentType xContentType) {
         final int length;
-        if (XContentType.JSON == xContentType && bytesReference.get(nextMarker - 1) == (byte) '\r') {
+        if (XContentType.JSON == xContentType && bytesReference.get(nextMarker - 1) == (byte)'\r') {
             length = nextMarker - from - 1;
         } else {
             length = nextMarker - from;
@@ -545,12 +554,14 @@ public class BulkRequest extends ActionRequest implements CompositeIndicesReques
     }
 
     /**
+     * 当前Index请求是否含有ingest 管道
+     *
      * @return Whether this bulk request contains index request with an ingest pipeline enabled.
      */
     public boolean hasIndexRequestsWithPipelines() {
         for (DocWriteRequest actionRequest : requests) {
             if (actionRequest instanceof IndexRequest) {
-                IndexRequest indexRequest = (IndexRequest) actionRequest;
+                IndexRequest indexRequest = (IndexRequest)actionRequest;
                 if (Strings.hasText(indexRequest.getPipeline())) {
                     return true;
                 }
@@ -568,11 +579,11 @@ public class BulkRequest extends ActionRequest implements CompositeIndicesReques
         }
         for (DocWriteRequest request : requests) {
             // We first check if refresh has been set
-            if (((WriteRequest<?>) request).getRefreshPolicy() != RefreshPolicy.NONE) {
+            if (((WriteRequest<?>)request).getRefreshPolicy() != RefreshPolicy.NONE) {
                 validationException = addValidationError(
-                        "RefreshPolicy is not supported on an item request. Set it on the BulkRequest instead.", validationException);
+                    "RefreshPolicy is not supported on an item request. Set it on the BulkRequest instead.", validationException);
             }
-            ActionRequestValidationException ex = ((WriteRequest<?>) request).validate();
+            ActionRequestValidationException ex = ((WriteRequest<?>)request).validate();
             if (ex != null) {
                 if (validationException == null) {
                     validationException = new ActionRequestValidationException();

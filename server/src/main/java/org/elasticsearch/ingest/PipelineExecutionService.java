@@ -68,16 +68,19 @@ public class PipelineExecutionService implements ClusterStateApplier {
                 for (DocWriteRequest actionRequest : actionRequests) {
                     IndexRequest indexRequest = null;
                     if (actionRequest instanceof IndexRequest) {
-                        indexRequest = (IndexRequest) actionRequest;
+                        indexRequest = (IndexRequest)actionRequest;
                     } else if (actionRequest instanceof UpdateRequest) {
-                        UpdateRequest updateRequest = (UpdateRequest) actionRequest;
+                        UpdateRequest updateRequest = (UpdateRequest)actionRequest;
                         indexRequest = updateRequest.docAsUpsert() ? updateRequest.doc() : updateRequest.upsertRequest();
                     }
+                    // 如果这批请求中的当前请求含有ingest标识,那么现在本节点对其做预处理,因为当前节点是个ingest节点
                     if (indexRequest != null && Strings.hasText(indexRequest.getPipeline())) {
                         try {
+                            // 内部预处理,通过 pipelineId 来获取指定的预处理管道
                             innerExecute(indexRequest, getPipeline(indexRequest.getPipeline()));
                             //this shouldn't be needed here but we do it for consistency with index api
                             // which requires it to prevent double execution
+                            // 移除 pipeline标识,也就是已经预处理过了
                             indexRequest.setPipeline(null);
                         } catch (Exception e) {
                             itemFailureHandler.accept(indexRequest, e);
@@ -150,21 +153,24 @@ public class PipelineExecutionService implements ClusterStateApplier {
             String parent = indexRequest.parent();
             Long version = indexRequest.version();
             VersionType versionType = indexRequest.versionType();
+            // 源数据
             Map<String, Object> sourceAsMap = indexRequest.sourceAsMap();
+            // ingest文档
             IngestDocument ingestDocument = new IngestDocument(index, type, id, routing, parent, version, versionType, sourceAsMap);
+            // 管道对其预处理，比如 日期处理 DateIndexNameProcessor
             pipeline.execute(ingestDocument);
-
+            // 获取预处理后的数据
             Map<IngestDocument.MetaData, Object> metadataMap = ingestDocument.extractMetadata();
             //it's fine to set all metadata fields all the time, as ingest document holds their starting values
             //before ingestion, which might also get modified during ingestion.
-            indexRequest.index((String) metadataMap.get(IngestDocument.MetaData.INDEX));
-            indexRequest.type((String) metadataMap.get(IngestDocument.MetaData.TYPE));
-            indexRequest.id((String) metadataMap.get(IngestDocument.MetaData.ID));
-            indexRequest.routing((String) metadataMap.get(IngestDocument.MetaData.ROUTING));
-            indexRequest.parent((String) metadataMap.get(IngestDocument.MetaData.PARENT));
-            indexRequest.version(((Number) metadataMap.get(IngestDocument.MetaData.VERSION)).longValue());
+            indexRequest.index((String)metadataMap.get(IngestDocument.MetaData.INDEX));
+            indexRequest.type((String)metadataMap.get(IngestDocument.MetaData.TYPE));
+            indexRequest.id((String)metadataMap.get(IngestDocument.MetaData.ID));
+            indexRequest.routing((String)metadataMap.get(IngestDocument.MetaData.ROUTING));
+            indexRequest.parent((String)metadataMap.get(IngestDocument.MetaData.PARENT));
+            indexRequest.version(((Number)metadataMap.get(IngestDocument.MetaData.VERSION)).longValue());
             if (metadataMap.get(IngestDocument.MetaData.VERSION_TYPE) != null) {
-                indexRequest.versionType(VersionType.fromString((String) metadataMap.get(IngestDocument.MetaData.VERSION_TYPE)));
+                indexRequest.versionType(VersionType.fromString((String)metadataMap.get(IngestDocument.MetaData.VERSION_TYPE)));
             }
             indexRequest.source(ingestDocument.getSourceAndMetadata());
         } catch (Exception e) {
@@ -178,6 +184,12 @@ public class PipelineExecutionService implements ClusterStateApplier {
         }
     }
 
+    /**
+     * 获取指定的管道,可通过pipelineId 来从多条预处理管道中获取一条
+     *
+     * @param pipelineId
+     * @return
+     */
     private Pipeline getPipeline(String pipelineId) {
         Pipeline pipeline = store.get(pipelineId);
         if (pipeline == null) {
