@@ -489,6 +489,16 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             return this.node;
         }
 
+        /**
+         * 发送TCP请求
+         *
+         * @param requestId
+         * @param action
+         * @param request
+         * @param options
+         * @throws IOException
+         * @throws TransportException
+         */
         @Override
         public void sendRequest(long requestId, String action, TransportRequest request, TransportRequestOptions options)
             throws IOException, TransportException {
@@ -709,6 +719,12 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         }
     }
 
+    /**
+     * 获取指定节点的链接
+     *
+     * @param node
+     * @return
+     */
     @Override
     public NodeChannels getConnection(DiscoveryNode node) {
         NodeChannels nodeChannels = connectedNodes.get(node);

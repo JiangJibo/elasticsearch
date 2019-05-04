@@ -69,6 +69,7 @@ import org.elasticsearch.tasks.Task;
 import org.elasticsearch.tasks.TaskId;
 import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.ConnectTransportException;
+import org.elasticsearch.transport.Transport.Connection;
 import org.elasticsearch.transport.TransportChannel;
 import org.elasticsearch.transport.TransportChannelResponseHandler;
 import org.elasticsearch.transport.TransportException;
@@ -712,6 +713,7 @@ public abstract class TransportReplicationAction<
             }
 
             // request does not have a shardId yet, we need to pass the concrete index to resolve shardId
+            // 需要通过index确定分片
             final String concreteIndex = concreteIndex(state);
             final IndexMetaData indexMetaData = state.metaData().index(concreteIndex);
             if (indexMetaData == null) {
@@ -723,6 +725,7 @@ public abstract class TransportReplicationAction<
             }
 
             // resolve all derived request fields, so we can route and apply it
+            // 重新设置当前请求等待多时个slave shard回复
             resolveRequest(indexMetaData, request);
             assert request.shardId() != null : "request shardId must be set in resolveRequest";
             assert request.waitForActiveShards() != ActiveShardCount.DEFAULT : "request waitForActiveShards must be set in resolveRequest";
@@ -742,6 +745,11 @@ public abstract class TransportReplicationAction<
             }
         }
 
+        //performLocalAction和performRemoteAction实现如下，最终都会调用
+        //performAction方法，不过传入的action分别为transportPrimaryAction
+        //（BulkAction.NAME + "[s][p]"）和actionName(BulkAction.NAME + "[s]")，
+        //具体节点会根据此action找到注册到transportService中的请求处理Handler，
+        //除了上面两种action，还有一种是副分片使用的action，即transportReplicaAction（BulkAction.NAME + "[s][r]"）
         private void performLocalAction(ClusterState state, ShardRouting primary, DiscoveryNode node, IndexMetaData indexMetaData) {
             setPhase(task, "waiting_on_primary");
             if (logger.isTraceEnabled()) {
@@ -835,6 +843,15 @@ public abstract class TransportReplicationAction<
             }
         }
 
+        /**
+         * 调用 {@link TransportService#sendRequestInternal(Connection, String, TransportRequest, TransportRequestOptions, TransportResponseHandler)}
+         * 当然中间会有interceptor拦截请求
+         *
+         * @param node
+         * @param action
+         * @param isPrimaryAction
+         * @param requestToPerform
+         */
         private void performAction(final DiscoveryNode node, final String action, final boolean isPrimaryAction,
                                    final TransportRequest requestToPerform) {
             transportService.sendRequest(node, action, requestToPerform, transportOptions, new TransportResponseHandler<Response>() {
