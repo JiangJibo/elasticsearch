@@ -89,6 +89,7 @@ public class ReplicationOperation<
     }
 
     public void execute() throws Exception {
+        // 确定要等待的replica的个数,如果校验不通过，返回错误信息
         final String activeShardCountFailure = checkActiveShardCount();
         final ShardRouting primaryRouting = primary.routingEntry();
         final ShardId primaryId = primaryRouting.shardId();
@@ -100,8 +101,10 @@ public class ReplicationOperation<
 
         totalShards.incrementAndGet();
         pendingActions.incrementAndGet(); // increase by 1 until we finish all primary coordination
+        // 在主分片上执行请求
         primaryResult = primary.perform(request);
         primary.updateLocalCheckpointForShard(primaryRouting.allocationId().getId(), primary.localCheckpoint());
+        // replica上的数据同步请求
         final ReplicaRequest replicaRequest = primaryResult.replicaRequest();
         if (replicaRequest != null) {
             if (logger.isTraceEnabled()) {

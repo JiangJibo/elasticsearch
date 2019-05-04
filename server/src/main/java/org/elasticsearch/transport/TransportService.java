@@ -128,6 +128,10 @@ public class TransportService extends AbstractLifecycleComponent {
      * if set will call requests sent to this id to shortcut and executed locally
      */
     volatile DiscoveryNode localNode = null;
+
+    /**
+     * 本地节点连接,若当前分片是主分片会自发自收
+     */
     private final Transport.Connection localNodeConnection = new Transport.Connection() {
         @Override
         public DiscoveryNode getNode() {
@@ -664,11 +668,21 @@ public class TransportService extends AbstractLifecycleComponent {
         }
     }
 
+    /**
+     * 发送本地请求,当当前分片是主分片时会调用此方法
+     * {@link org.elasticsearch.action.support.replication.TransportReplicationAction#registerRequestHandlers(String, TransportService, Supplier, Supplier, String)}
+     *
+     * @param requestId
+     * @param action
+     * @param request
+     * @param options
+     */
     private void sendLocalRequest(long requestId, final String action, final TransportRequest request, TransportRequestOptions options) {
         final DirectResponseChannel channel = new DirectResponseChannel(logger, localNode, action, requestId, this, threadPool);
         try {
             onRequestSent(localNode, requestId, action, request, options);
             onRequestReceived(requestId, action);
+            // 通过action获取handler，看
             final RequestHandlerRegistry reg = getRequestHandler(action);
             if (reg == null) {
                 throw new ActionNotFoundTransportException("Action [" + action + "] not found");

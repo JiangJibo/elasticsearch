@@ -148,12 +148,27 @@ public abstract class TransportReplicationAction<
         this.syncGlobalCheckpointAfterOperation = syncGlobalCheckpointAfterOperation;
     }
 
+    /**
+     * 注册针对请求的handler
+     *
+     * @param actionName
+     * @param transportService
+     * @param request
+     * @param replicaRequest
+     * @param executor
+     */
     protected void registerRequestHandlers(String actionName, TransportService transportService, Supplier<Request> request,
                                            Supplier<ReplicaRequest> replicaRequest, String executor) {
+        //performAction发送的请求会由下面注册的handler进行处理
+        //如果当前节点不是主分片，则会转发给相应的主分片，
+        //主分片使用OperationTransportHandler进行处理，
+        //OperationTransportHandler主要调用execute方法
         transportService.registerRequestHandler(actionName, request, ThreadPool.Names.SAME, new OperationTransportHandler());
+        // 注册一个primary action, 若当前节点文primary node, 则会用此handler来处理请求, action名称格式为： actionName + "[p]"
         transportService.registerRequestHandler(transportPrimaryAction, () -> new ConcreteShardRequest<>(request), executor,
             new PrimaryOperationTransportHandler());
         // we must never reject on because of thread pool capacity on replicas
+        // 针对replica 注册 handler
         transportService.registerRequestHandler(transportReplicaAction,
             () -> new ConcreteReplicaRequest<>(replicaRequest),
             executor, true, true,
@@ -241,6 +256,9 @@ public abstract class TransportReplicationAction<
             || TransportActions.isShardNotAvailableException(e);
     }
 
+    /**
+     * 备用节点的传输请求handler,其不处理请求，仅负责转发
+     */
     protected class OperationTransportHandler implements TransportRequestHandler<Request> {
 
         public OperationTransportHandler() {
@@ -277,6 +295,9 @@ public abstract class TransportReplicationAction<
         }
     }
 
+    /**
+     * 主节点操作处理的handler,当当前节点时主节点时不需要再额外发送请求
+     */
     protected class PrimaryOperationTransportHandler implements TransportRequestHandler<ConcreteShardRequest<Request>> {
 
         public PrimaryOperationTransportHandler() {
@@ -313,14 +334,25 @@ public abstract class TransportReplicationAction<
             this.replicationTask = replicationTask;
         }
 
+        /**
+         * 注意下面传入的参数this，AsyncPrimaryAction也实现了ActionListener，所以会作为操作结果回调其onResponse函数
+         *
+         * @throws Exception
+         */
         @Override
         protected void doRun() throws Exception {
             acquirePrimaryShardReference(request.shardId(), targetAllocationID, primaryTerm, this, request);
         }
 
+        /**
+         * 获取到分片的操作许可后回调此函数，类似于加锁的概念
+         *
+         * @param primaryShardReference 主分片的引用
+         */
         @Override
         public void onResponse(PrimaryShardReference primaryShardReference) {
             try {
+                // 如果拿到的分片引用不是主分片
                 if (primaryShardReference.isRelocated()) {
                     primaryShardReference.close(); // release shard operation lock as soon as possible
                     setPhase(replicationTask, "primary_delegation");
@@ -350,10 +382,10 @@ public abstract class TransportReplicationAction<
                         });
                 } else {
                     setPhase(replicationTask, "primary");
+                    //该listener主要负责在操作结束之后释放permit并返回结果给请求节点
                     final ActionListener<Response> listener = createResponseListener(primaryShardReference);
-                    createReplicatedOperation(request,
-                        ActionListener.wrap(result -> result.respond(listener), listener::onFailure),
-                        primaryShardReference)
+                    // 创建具体的请求并执行
+                    createReplicatedOperation(request, ActionListener.wrap(result -> result.respond(listener), listener::onFailure), primaryShardReference)
                         .execute();
                 }
             } catch (Exception e) {
@@ -675,6 +707,7 @@ public abstract class TransportReplicationAction<
     }
 
     /**
+     * 重新路由阶段
      * Responsible for routing and retrying failed operations on the primary.
      * The actual primary operation is done in {@link ReplicationOperation} on the
      * node with primary copy.
@@ -735,6 +768,7 @@ public abstract class TransportReplicationAction<
             if (retryIfUnavailable(state, primary)) {
                 return;
             }
+            // 获取主分片所在节点
             final DiscoveryNode node = state.nodes().get(primary.currentNodeId());
             //下面为执行操作的阶段一，在主分片上执行具体的操作
             //如果当前节点为主分片所在节点，则本地执行request
@@ -745,17 +779,26 @@ public abstract class TransportReplicationAction<
             }
         }
 
-        //performLocalAction和performRemoteAction实现如下，最终都会调用
-        //performAction方法，不过传入的action分别为transportPrimaryAction
-        //（BulkAction.NAME + "[s][p]"）和actionName(BulkAction.NAME + "[s]")，
-        //具体节点会根据此action找到注册到transportService中的请求处理Handler，
-        //除了上面两种action，还有一种是副分片使用的action，即transportReplicaAction（BulkAction.NAME + "[s][r]"）
+        /**
+         * performLocalAction和performRemoteAction实现如下，最终都会调用
+         * performAction方法，不过传入的action分别为transportPrimaryAction
+         * （BulkAction.NAME + "[s][p]"）和actionName(BulkAction.NAME + "[s]")，
+         * 具体节点会根据此action找到注册到transportService中的请求处理Handler，
+         * 除了上面两种action，还有一种是副分片使用的action，即transportReplicaAction（BulkAction.NAME + "[s][r]"）
+         * 最终调用{@link TransportService#sendLocalRequest(long, String, TransportRequest, TransportRequestOptions)}
+         *
+         * @param state
+         * @param primary
+         * @param node
+         * @param indexMetaData
+         */
         private void performLocalAction(ClusterState state, ShardRouting primary, DiscoveryNode node, IndexMetaData indexMetaData) {
             setPhase(task, "waiting_on_primary");
             if (logger.isTraceEnabled()) {
                 logger.trace("send action [{}] to local primary [{}] for request [{}] with cluster state version [{}] to [{}] ",
                     transportPrimaryAction, request.shardId(), request, state.version(), primary.currentNodeId());
             }
+            // 通过 transportPrimaryAction 注册的handler来处理
             performAction(node, transportPrimaryAction, true,
                 new ConcreteShardRequest<>(request, primary.allocationId().getId(), indexMetaData.primaryTerm(primary.id())));
         }
@@ -848,8 +891,8 @@ public abstract class TransportReplicationAction<
          * 当然中间会有interceptor拦截请求
          *
          * @param node
-         * @param action
-         * @param isPrimaryAction
+         * @param action           action名称
+         * @param isPrimaryAction  是否是主分片
          * @param requestToPerform
          */
         private void performAction(final DiscoveryNode node, final String action, final boolean isPrimaryAction,
@@ -985,8 +1028,16 @@ public abstract class TransportReplicationAction<
         }
 
         ActionListener<Releasable> onAcquired = new ActionListener<Releasable>() {
+
+            /**
+             * 当 获取到index分片的许可后，回调此函数
+             * {@link AsyncPrimaryAction#onResponse(PrimaryShardReference)}
+             *
+             * @param releasable
+             */
             @Override
             public void onResponse(Releasable releasable) {
+                // onReferenceAcquired 的实现之一：AsyncPrimaryAction,回调 其 AsyncPrimaryAction#onResponse方法
                 onReferenceAcquired.onResponse(new PrimaryShardReference(indexShard, releasable));
             }
 
@@ -995,7 +1046,7 @@ public abstract class TransportReplicationAction<
                 onReferenceAcquired.onFailure(e);
             }
         };
-
+        // 索引分片处理,当获取到操作需要后，回调 onAcquired#onResponse 方法进行操作
         indexShard.acquirePrimaryOperationPermit(onAcquired, executor, debugInfo);
     }
 
@@ -1314,6 +1365,11 @@ public abstract class TransportReplicationAction<
         }
     }
 
+    /**
+     * 具体的备份请求
+     *
+     * @param <R>
+     */
     protected static final class ConcreteReplicaRequest<R extends TransportRequest> extends ConcreteShardRequest<R> {
 
         private long globalCheckpoint;

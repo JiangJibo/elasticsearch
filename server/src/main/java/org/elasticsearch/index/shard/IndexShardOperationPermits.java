@@ -98,14 +98,14 @@ final class IndexShardOperationPermits implements Closeable {
      * @param timeUnit  the time unit of the {@code timeout} argument
      * @param onBlocked the action to run once the block has been acquired
      * @param <E>       the type of checked exception thrown by {@code onBlocked}
-     * @throws InterruptedException      if calling thread is interrupted
-     * @throws TimeoutException          if timed out waiting for in-flight operations to finish
+     * @throws InterruptedException if calling thread is interrupted
+     * @throws TimeoutException if timed out waiting for in-flight operations to finish
      * @throws IndexShardClosedException if operation permit has been closed
      */
     <E extends Exception> void blockOperations(
-            final long timeout,
-            final TimeUnit timeUnit,
-            final CheckedRunnable<E> onBlocked) throws InterruptedException, TimeoutException, E {
+        final long timeout,
+        final TimeUnit timeUnit,
+        final CheckedRunnable<E> onBlocked) throws InterruptedException, TimeoutException, E {
         if (closed) {
             throw new IndexShardClosedException(shardId);
         }
@@ -130,7 +130,7 @@ final class IndexShardOperationPermits implements Closeable {
      * @param <E>       the type of checked exception thrown by {@code onBlocked} (not thrown on the calling thread)
      */
     <E extends Exception> void asyncBlockOperations(
-            final long timeout, final TimeUnit timeUnit, final CheckedRunnable<E> onBlocked, final Consumer<Exception> onFailure) {
+        final long timeout, final TimeUnit timeUnit, final CheckedRunnable<E> onBlocked, final Consumer<Exception> onFailure) {
         delayOperations();
         threadPool.executor(ThreadPool.Names.GENERIC).execute(new AbstractRunnable() {
             @Override
@@ -162,9 +162,9 @@ final class IndexShardOperationPermits implements Closeable {
     }
 
     private <E extends Exception> void doBlockOperations(
-            final long timeout,
-            final TimeUnit timeUnit,
-            final CheckedRunnable<E> onBlocked) throws InterruptedException, TimeoutException, E {
+        final long timeout,
+        final TimeUnit timeUnit,
+        final CheckedRunnable<E> onBlocked) throws InterruptedException, TimeoutException, E {
         if (Assertions.ENABLED) {
             // since delayed is not volatile, we have to synchronize even here for visibility
             synchronized (this) {
@@ -224,7 +224,6 @@ final class IndexShardOperationPermits implements Closeable {
      * @param debugInfo       an extra information that can be useful when tracing an unreleased permit. When assertions are enabled
      *                        the tracing will capture the supplied object's {@link Object#toString()} value. Otherwise the object
      *                        isn't used
-     *
      */
     public void acquire(final ActionListener<Releasable> onAcquired, final String executorOnDelay, final boolean forceExecution,
                         final Object debugInfo) {
@@ -237,8 +236,17 @@ final class IndexShardOperationPermits implements Closeable {
         acquire(onAcquired, executorOnDelay, forceExecution, debugInfo, stackTrace);
     }
 
+    /**
+     * 获取索引分片操作许可
+     *
+     * @param onAcquired
+     * @param executorOnDelay
+     * @param forceExecution
+     * @param debugInfo
+     * @param stackTrace
+     */
     private void acquire(final ActionListener<Releasable> onAcquired, final String executorOnDelay, final boolean forceExecution,
-                        final Object debugInfo, final StackTraceElement[] stackTrace) {
+                         final Object debugInfo, final StackTraceElement[] stackTrace) {
         if (closed) {
             onAcquired.onFailure(new IndexShardClosedException(shardId));
             return;
@@ -252,13 +260,14 @@ final class IndexShardOperationPermits implements Closeable {
                     if (executorOnDelay != null) {
                         wrappedListener =
                             new PermitAwareThreadedActionListener(threadPool, executorOnDelay,
-                                        new ContextPreservingActionListener<>(contextSupplier, onAcquired), forceExecution);
+                                new ContextPreservingActionListener<>(contextSupplier, onAcquired), forceExecution);
                     } else {
                         wrappedListener = new ContextPreservingActionListener<>(contextSupplier, onAcquired);
                     }
                     delayedOperations.add(new DelayedOperation(wrappedListener, debugInfo, stackTrace));
                     return;
                 } else {
+                    // 无需延迟直接尝试获取许可
                     releasable = acquire(debugInfo, stackTrace);
                 }
             }
@@ -314,7 +323,7 @@ final class IndexShardOperationPermits implements Closeable {
 
     /**
      * @return a list of describing each permit that wasn't released yet. The description consist of the debugInfo supplied
-     *         when the permit was acquired plus a stack traces that was captured when the permit was request.
+     * when the permit was acquired plus a stack traces that was captured when the permit was request.
      */
     List<String> getActiveOperations() {
         return issuedPermits.values().stream().map(
@@ -323,6 +332,7 @@ final class IndexShardOperationPermits implements Closeable {
     }
 
     private static class DelayedOperation {
+
         private final ActionListener<Releasable> listener;
         private final String debugInfo;
         private final StackTraceElement[] stackTrace;
