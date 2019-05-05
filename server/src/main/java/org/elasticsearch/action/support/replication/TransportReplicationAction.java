@@ -1095,6 +1095,13 @@ public abstract class TransportReplicationAction<
             }
         }
 
+        /**
+         * 主分片处理请求
+         *
+         * @param request the request to perform
+         * @return
+         * @throws Exception
+         */
         @Override
         public PrimaryResult perform(Request request) throws Exception {
             PrimaryResult result = shardOperationOnPrimary(request, indexShard);

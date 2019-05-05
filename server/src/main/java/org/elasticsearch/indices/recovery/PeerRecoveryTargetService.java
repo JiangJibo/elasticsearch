@@ -72,6 +72,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.elasticsearch.common.unit.TimeValue.timeValueMillis;
 
 /**
+ * 处理从source处获取的数据
  * The recovery target handles recoveries of peer shards of the shard+node to recover to.
  * <p>
  * Note, it can be safely assumed that there will only be a single recovery per shard (index+id) and
@@ -80,6 +81,7 @@ import static org.elasticsearch.common.unit.TimeValue.timeValueMillis;
 public class PeerRecoveryTargetService extends AbstractComponent implements IndexEventListener {
 
     public static class Actions {
+
         public static final String FILES_INFO = "internal:index/shard/recovery/filesInfo";
         public static final String FILE_CHUNK = "internal:index/shard/recovery/file_chunk";
         public static final String CLEAN_FILES = "internal:index/shard/recovery/clean_files";
@@ -100,7 +102,7 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
     private final RecoveriesCollection onGoingRecoveries;
 
     public PeerRecoveryTargetService(Settings settings, ThreadPool threadPool, TransportService transportService, RecoverySettings
-            recoverySettings, ClusterService clusterService) {
+        recoverySettings, ClusterService clusterService) {
         super(settings);
         this.threadPool = threadPool;
         this.transportService = transportService;
@@ -108,25 +110,40 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
         this.clusterService = clusterService;
         this.onGoingRecoveries = new RecoveriesCollection(logger, threadPool, this::waitForClusterState);
 
+        //负责接受处理Source端Shard快照文件
         transportService.registerRequestHandler(Actions.FILES_INFO, RecoveryFilesInfoRequest::new, ThreadPool.Names.GENERIC, new
-                FilesInfoRequestHandler());
+            FilesInfoRequestHandler());
+
+        //负责接受Source端发送的Shard文件块
         transportService.registerRequestHandler(Actions.FILE_CHUNK, RecoveryFileChunkRequest::new, ThreadPool.Names.GENERIC, new
-                FileChunkTransportRequestHandler());
+            FileChunkTransportRequestHandler());
+
+        //负责将接受到的Shard文件更改为正式文件
         transportService.registerRequestHandler(Actions.CLEAN_FILES, RecoveryCleanFilesRequest::new, ThreadPool.Names.GENERIC, new
-                CleanFilesRequestHandler());
+            CleanFilesRequestHandler());
+
+        //负责打开Engine，准备接受Source端Translog进行日志重放
         transportService.registerRequestHandler(Actions.PREPARE_TRANSLOG, ThreadPool.Names.GENERIC,
             RecoveryPrepareForTranslogOperationsRequest::new, new PrepareForTranslogOperationsRequestHandler());
+
+        //负责打开Engine，准备接受Source端Translog进行日志重放
         transportService.registerRequestHandler(Actions.TRANSLOG_OPS, RecoveryTranslogOperationsRequest::new, ThreadPool.Names.GENERIC,
-                new TranslogOperationsRequestHandler());
+            new TranslogOperationsRequestHandler());
+
+        //负责刷新Engine，让新的Segment生效，回收旧的文件，更新global checkpoint等
         transportService.registerRequestHandler(Actions.FINALIZE, RecoveryFinalizeRecoveryRequest::new, ThreadPool.Names.GENERIC, new
-                FinalizeRecoveryRequestHandler());
+            FinalizeRecoveryRequestHandler());
+
+
         transportService.registerRequestHandler(Actions.WAIT_CLUSTERSTATE, RecoveryWaitForClusterStateRequest::new,
             ThreadPool.Names.GENERIC, new WaitForClusterStateRequestHandler());
+
+        //如果是主分片relocate，则负责接受主分片身份
         transportService.registerRequestHandler(
-                Actions.HANDOFF_PRIMARY_CONTEXT,
-                RecoveryHandoffPrimaryContextRequest::new,
-                ThreadPool.Names.GENERIC,
-                new HandoffPrimaryContextRequestHandler());
+            Actions.HANDOFF_PRIMARY_CONTEXT,
+            RecoveryHandoffPrimaryContextRequest::new,
+            ThreadPool.Names.GENERIC,
+            new HandoffPrimaryContextRequestHandler());
     }
 
     @Override
@@ -144,7 +161,7 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
 
     protected void retryRecovery(final long recoveryId, final Throwable reason, TimeValue retryAfter, TimeValue activityTimeout) {
         logger.trace(() -> new ParameterizedMessage(
-                "will retry recovery with id [{}] in [{}]", recoveryId, retryAfter), reason);
+            "will retry recovery with id [{}] in [{}]", recoveryId, retryAfter), reason);
         retryRecovery(recoveryId, retryAfter, activityTimeout);
     }
 
@@ -191,13 +208,13 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
             logger.trace("{} starting recovery from {}", request.shardId(), request.sourceNode());
             final AtomicReference<RecoveryResponse> responseHolder = new AtomicReference<>();
             cancellableThreads.execute(() -> responseHolder.set(
-                    transportService.submitRequest(request.sourceNode(), PeerRecoverySourceService.Actions.START_RECOVERY, request,
-                            new FutureTransportResponseHandler<RecoveryResponse>() {
-                                @Override
-                                public RecoveryResponse newInstance() {
-                                    return new RecoveryResponse();
-                                }
-                            }).txGet()));
+                transportService.submitRequest(request.sourceNode(), PeerRecoverySourceService.Actions.START_RECOVERY, request,
+                    new FutureTransportResponseHandler<RecoveryResponse>() {
+                        @Override
+                        public RecoveryResponse newInstance() {
+                            return new RecoveryResponse();
+                        }
+                    }).txGet()));
             final RecoveryResponse recoveryResponse = responseHolder.get();
             final TimeValue recoveryTime = new TimeValue(timer.time());
             // do this through ongoing recoveries to remove it from the collection
@@ -205,20 +222,20 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
             if (logger.isTraceEnabled()) {
                 StringBuilder sb = new StringBuilder();
                 sb.append('[').append(request.shardId().getIndex().getName()).append(']').append('[').append(request.shardId().id())
-                        .append("] ");
+                    .append("] ");
                 sb.append("recovery completed from ").append(request.sourceNode()).append(", took[").append(recoveryTime).append("]\n");
                 sb.append("   phase1: recovered_files [").append(recoveryResponse.phase1FileNames.size()).append("]").append(" with " +
-                        "total_size of [").append(new ByteSizeValue(recoveryResponse.phase1TotalSize)).append("]")
-                        .append(", took [").append(timeValueMillis(recoveryResponse.phase1Time)).append("], throttling_wait [").append
-                        (timeValueMillis(recoveryResponse.phase1ThrottlingWaitTime)).append(']')
-                        .append("\n");
+                    "total_size of [").append(new ByteSizeValue(recoveryResponse.phase1TotalSize)).append("]")
+                    .append(", took [").append(timeValueMillis(recoveryResponse.phase1Time)).append("], throttling_wait [").append
+                    (timeValueMillis(recoveryResponse.phase1ThrottlingWaitTime)).append(']')
+                    .append("\n");
                 sb.append("         : reusing_files   [").append(recoveryResponse.phase1ExistingFileNames.size()).append("] with " +
-                        "total_size of [").append(new ByteSizeValue(recoveryResponse.phase1ExistingTotalSize)).append("]\n");
+                    "total_size of [").append(new ByteSizeValue(recoveryResponse.phase1ExistingTotalSize)).append("]\n");
                 sb.append("   phase2: start took [").append(timeValueMillis(recoveryResponse.startTime)).append("]\n");
                 sb.append("         : recovered [").append(recoveryResponse.phase2Operations).append("]").append(" transaction log " +
-                        "operations")
-                        .append(", took [").append(timeValueMillis(recoveryResponse.phase2Time)).append("]")
-                        .append("\n");
+                    "operations")
+                    .append(", took [").append(timeValueMillis(recoveryResponse.phase2Time)).append("]")
+                    .append("\n");
                 logger.trace("{}", sb);
             } else {
                 logger.debug("{} recovery done from [{}], took [{}]", request.shardId(), request.sourceNode(), recoveryTime);
@@ -228,7 +245,7 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
         } catch (Exception e) {
             if (logger.isTraceEnabled()) {
                 logger.trace(() -> new ParameterizedMessage(
-                        "[{}][{}] Got exception on recovery", request.shardId().getIndex().getName(), request.shardId().id()), e);
+                    "[{}][{}] Got exception on recovery", request.shardId().getIndex().getName(), request.shardId().id()), e);
             }
             Throwable cause = ExceptionsHelper.unwrapCause(e);
             if (cause instanceof CancellableThreads.ExecutionCancelledException) {
@@ -389,6 +406,7 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
     }
 
     public interface RecoveryListener {
+
         void onRecoveryDone(RecoveryState state);
 
         void onRecoveryFailure(RecoveryState state, RecoveryFailedException e, boolean sendShardFailure);
@@ -447,7 +465,7 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
         @Override
         public void messageReceived(final RecoveryTranslogOperationsRequest request, final TransportChannel channel) throws IOException {
             try (RecoveryRef recoveryRef =
-                         onGoingRecoveries.getRecoverySafe(request.recoveryId(), request.shardId())) {
+                     onGoingRecoveries.getRecoverySafe(request.recoveryId(), request.shardId())) {
                 final ClusterStateObserver observer = new ClusterStateObserver(clusterService, null, logger, threadPool.getThreadContext());
                 final RecoveryTarget recoveryTarget = recoveryRef.target();
                 try {
@@ -486,7 +504,7 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
                         public void onTimeout(TimeValue timeout) {
                             // note that we do not use a timeout (see comment above)
                             onFailure(new ElasticsearchTimeoutException("timed out waiting for mapping updates (timeout [" + timeout +
-                                    "])"));
+                                "])"));
                         }
                     });
                 }
@@ -527,8 +545,8 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
                 logger.trace("successfully waited for cluster state with version {} (current: {})", clusterStateVersion, currentVersion);
             } catch (Exception e) {
                 logger.debug(() -> new ParameterizedMessage(
-                        "failed waiting for cluster state with version {} (current: {})",
-                        clusterStateVersion, clusterService.state().getVersion()), e);
+                    "failed waiting for cluster state with version {} (current: {})",
+                    clusterStateVersion, clusterService.state().getVersion()), e);
                 throw ExceptionsHelper.convertToRuntime(e);
             }
         }
@@ -541,7 +559,7 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
             try (RecoveryRef recoveryRef = onGoingRecoveries.getRecoverySafe(request.recoveryId(), request.shardId()
             )) {
                 recoveryRef.target().receiveFileInfo(request.phase1FileNames, request.phase1FileSizes, request.phase1ExistingFileNames,
-                        request.phase1ExistingFileSizes, request.totalTranslogOps);
+                    request.phase1ExistingFileSizes, request.totalTranslogOps);
                 channel.sendResponse(TransportResponse.Empty.INSTANCE);
             }
         }
@@ -587,7 +605,7 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
                 }
 
                 recoveryTarget.writeFileChunk(request.metadata(), request.position(), request.content(),
-                        request.lastChunk(), request.totalTranslogOps()
+                    request.lastChunk(), request.totalTranslogOps()
                 );
             }
             channel.sendResponse(TransportResponse.Empty.INSTANCE);
@@ -608,12 +626,12 @@ public class PeerRecoveryTargetService extends AbstractComponent implements Inde
                 if (recoveryRef != null) {
                     logger.error(() -> new ParameterizedMessage("unexpected error during recovery [{}], failing shard", recoveryId), e);
                     onGoingRecoveries.failRecovery(recoveryId,
-                            new RecoveryFailedException(recoveryRef.target().state(), "unexpected error", e),
-                            true // be safe
+                        new RecoveryFailedException(recoveryRef.target().state(), "unexpected error", e),
+                        true // be safe
                     );
                 } else {
                     logger.debug(() -> new ParameterizedMessage(
-                            "unexpected error during recovery, but recovery id [{}] is finished", recoveryId), e);
+                        "unexpected error during recovery, but recovery id [{}] is finished", recoveryId), e);
                 }
             }
         }

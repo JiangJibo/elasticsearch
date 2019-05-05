@@ -44,6 +44,9 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.function.Supplier;
 
+/**
+ * 集群服务
+ */
 public class ClusterService extends AbstractLifecycleComponent {
 
     private final MasterService masterService;
@@ -71,6 +74,7 @@ public class ClusterService extends AbstractLifecycleComponent {
         this.clusterSettings.addSettingsUpdateConsumer(CLUSTER_SERVICE_SLOW_TASK_LOGGING_THRESHOLD_SETTING,
             this::setSlowTaskLoggingThreshold);
         this.initialClusterStateCustoms = initialClusterStateCustoms;
+        // 集群应用服务
         this.clusterApplierService = new ClusterApplierService(settings, clusterSettings, threadPool, this::newClusterStateBuilder);
     }
 

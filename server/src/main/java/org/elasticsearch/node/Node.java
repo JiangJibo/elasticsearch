@@ -529,8 +529,10 @@ public class Node implements Closeable {
                     {
                         RecoverySettings recoverySettings = new RecoverySettings(settings, settingsModule.getClusterSettings());
                         processRecoverySettings(settingsModule.getClusterSettings(), recoverySettings);
+                        // peer to peer 恢复的数据来源端
                         b.bind(PeerRecoverySourceService.class).toInstance(new PeerRecoverySourceService(settings, transportService,
                                 indicesService, recoverySettings));
+                        // peer to peer 恢复的数据目标端,也就是要恢复的节点
                         b.bind(PeerRecoveryTargetService.class).toInstance(new PeerRecoveryTargetService(settings, threadPool,
                                 transportService, recoverySettings, clusterService));
                     }

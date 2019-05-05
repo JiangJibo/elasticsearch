@@ -101,7 +101,7 @@ public class ReplicationOperation<
 
         totalShards.incrementAndGet();
         pendingActions.incrementAndGet(); // increase by 1 until we finish all primary coordination
-        // 在主分片上执行请求
+        //调用 PrimaryShardReference 的perform方法,最后调用 TransportShardBulkAction 中的具体主分片操作
         primaryResult = primary.perform(request);
         primary.updateLocalCheckpointForShard(primaryRouting.allocationId().getId(), primary.localCheckpoint());
         // replica上的数据同步请求
@@ -121,6 +121,8 @@ public class ReplicationOperation<
             final long globalCheckpoint = primary.globalCheckpoint();
             final ReplicationGroup replicationGroup = primary.getReplicationGroup();
             markUnavailableShardsAsStale(replicaRequest, replicationGroup);
+            //进行副分片操作，具体也是发送之前采用计数器记录总操作个数，
+            //每完成一个就减少，减少到0之后则分片全部执行完毕
             performOnReplicas(replicaRequest, globalCheckpoint, replicationGroup);
         }
 

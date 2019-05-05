@@ -134,10 +134,10 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
                                       SnapshotShardsService snapshotShardsService,
                                       PrimaryReplicaSyncer primaryReplicaSyncer,
                                       GlobalCheckpointSyncAction globalCheckpointSyncAction) {
-        this(settings, (AllocatedIndices<? extends Shard, ? extends AllocatedIndex<? extends Shard>>) indicesService,
-                clusterService, threadPool, recoveryTargetService, shardStateAction,
-                nodeMappingRefreshAction, repositoriesService, searchService, syncedFlushService, peerRecoverySourceService,
-                snapshotShardsService, primaryReplicaSyncer, globalCheckpointSyncAction::updateGlobalCheckpointForShard);
+        this(settings, (AllocatedIndices<? extends Shard, ? extends AllocatedIndex<? extends Shard>>)indicesService,
+            clusterService, threadPool, recoveryTargetService, shardStateAction,
+            nodeMappingRefreshAction, repositoriesService, searchService, syncedFlushService, peerRecoverySourceService,
+            snapshotShardsService, primaryReplicaSyncer, globalCheckpointSyncAction::updateGlobalCheckpointForShard);
     }
 
     // for tests
@@ -157,12 +157,12 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
                                Consumer<ShardId> globalCheckpointSyncer) {
         super(settings);
         this.buildInIndexListener =
-                Arrays.asList(
-                        peerRecoverySourceService,
-                        recoveryTargetService,
-                        searchService,
-                        syncedFlushService,
-                        snapshotShardsService);
+            Arrays.asList(
+                peerRecoverySourceService,
+                recoveryTargetService,
+                searchService,
+                syncedFlushService,
+                snapshotShardsService);
         this.indicesService = indicesService;
         this.clusterService = clusterService;
         this.threadPool = threadPool;
@@ -532,12 +532,23 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         }
     }
 
+    /**
+     * 创建索引分片
+     *
+     * @param nodes
+     * @param routingTable
+     * @param shardRouting
+     * @param state
+     */
     private void createShard(DiscoveryNodes nodes, RoutingTable routingTable, ShardRouting shardRouting, ClusterState state) {
         assert shardRouting.initializing() : "only allow shard creation for initializing shard but was " + shardRouting;
 
         DiscoveryNode sourceNode = null;
-        if (shardRouting.recoverySource().getType() == Type.PEER)  {
+        // 如果分片的数据同步模式是点对点的
+        if (shardRouting.recoverySource().getType() == Type.PEER) {
+            // 寻找同步节点
             sourceNode = findSourceNodeForPeerRecovery(logger, routingTable, nodes, shardRouting);
+            // 如果没有找到同步节点
             if (sourceNode == null) {
                 logger.trace("ignoring initializing shard {} - no source node can be found.", shardRouting.shardId());
                 return;
@@ -610,9 +621,11 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
     private static DiscoveryNode findSourceNodeForPeerRecovery(Logger logger, RoutingTable routingTable, DiscoveryNodes nodes,
                                                                ShardRouting shardRouting) {
         DiscoveryNode sourceNode = null;
+        // 如果当前分片不是primary
         if (!shardRouting.primary()) {
             ShardRouting primary = routingTable.shardRoutingTable(shardRouting.shardId()).primaryShard();
             // only recover from started primary, if we can't find one, we will do it next round
+            // 如果primary是启动中的,那么从其进行数据同步
             if (primary.active()) {
                 sourceNode = nodes.get(primary.currentNodeId());
                 if (sourceNode == null) {
@@ -621,7 +634,9 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
             } else {
                 logger.trace("can't find replica source node because primary shard {} is not active.", primary);
             }
-        } else if (shardRouting.relocatingNodeId() != null) {
+        }
+        // 如果指定了重定位的节点id
+        else if (shardRouting.relocatingNodeId() != null) {
             sourceNode = nodes.get(shardRouting.relocatingNodeId());
             if (sourceNode == null) {
                 logger.trace("can't find relocation source node for shard {} because it is assigned to an unknown node [{}].",
@@ -683,11 +698,11 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
     private void sendFailShard(ShardRouting shardRouting, String message, @Nullable Exception failure, ClusterState state) {
         try {
             logger.warn(() -> new ParameterizedMessage(
-                    "[{}] marking and sending shard failed due to [{}]", shardRouting.shardId(), message), failure);
+                "[{}] marking and sending shard failed due to [{}]", shardRouting.shardId(), message), failure);
             failedShardsCache.put(shardRouting.shardId(), shardRouting);
             shardStateAction.localShardFailed(shardRouting, message, failure, SHARD_STATE_ACTION_LISTENER, state);
         } catch (Exception inner) {
-            if (failure != null) inner.addSuppressed(failure);
+            if (failure != null) { inner.addSuppressed(failure); }
             logger.warn(() -> new ParameterizedMessage(
                     "[{}][{}] failed to mark shard as failed (because of [{}])",
                     shardRouting.getIndexName(),
@@ -698,6 +713,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
     }
 
     private class FailedShardHandler implements Consumer<IndexShard.ShardFailure> {
+
         @Override
         public void accept(final IndexShard.ShardFailure shardFailure) {
             final ShardRouting shardRouting = shardFailure.routing;
@@ -737,7 +753,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
          * - Updates and persists the new routing value.
          * - Updates the primary term if this shard is a primary.
          * - Updates the allocation ids that are tracked by the shard if it is a primary.
-         *   See {@link ReplicationTracker#updateFromMaster(long, Set, IndexShardRoutingTable, Set)} for details.
+         * See {@link ReplicationTracker#updateFromMaster(long, Set, IndexShardRoutingTable, Set)} for details.
          *
          * @param shardRouting                the new routing entry
          * @param primaryTerm                 the new primary term
@@ -746,7 +762,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
          * @param inSyncAllocationIds         the allocation ids of the currently in-sync shard copies
          * @param routingTable                the shard routing table
          * @throws IndexShardRelocatedException if shard is marked as relocated and relocation aborted
-         * @throws IOException                  if shard state could not be persisted
+         * @throws IOException if shard state could not be persisted
          */
         void updateShardState(ShardRouting shardRouting,
                               long primaryTerm,
@@ -777,7 +793,8 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         /**
          * Returns shard with given id.
          */
-        @Nullable T getShardOrNull(int shardId);
+        @Nullable
+        T getShardOrNull(int shardId);
 
         /**
          * Removes shard with given id.
@@ -790,9 +807,9 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         /**
          * Creates a new {@link IndexService} for the given metadata.
          *
-         * @param indexMetaData          the index metadata to create the index for
-         * @param builtInIndexListener   a list of built-in lifecycle {@link IndexEventListener} that should should be used along side with
-         *                               the per-index listeners
+         * @param indexMetaData        the index metadata to create the index for
+         * @param builtInIndexListener a list of built-in lifecycle {@link IndexEventListener} that should should be used along side with
+         *                             the per-index listeners
          * @throws ResourceAlreadyExistsException if the index already exists.
          */
         U createIndex(IndexMetaData indexMetaData,
@@ -802,12 +819,12 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
          * Verify that the contents on disk for the given index is deleted; if not, delete the contents.
          * This method assumes that an index is already deleted in the cluster state and/or explicitly
          * through index tombstones.
-         * @param index {@code Index} to make sure its deleted from disk
+         *
+         * @param index        {@code Index} to make sure its deleted from disk
          * @param clusterState {@code ClusterState} to ensure the index is not part of it
          * @return IndexMetaData for the index loaded from disk
          */
         IndexMetaData verifyIndexIsDeleted(Index index, ClusterState clusterState);
-
 
         /**
          * Deletes an index that is not assigned to this node. This method cleans up all disk folders relating to the index
@@ -818,8 +835,9 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         /**
          * Removes the given index from this service and releases all associated resources. Persistent parts of the index
          * like the shards files, state and transaction logs are kept around in the case of a disaster recovery.
-         * @param index the index to remove
-         * @param reason the reason to remove the index
+         *
+         * @param index     the index to remove
+         * @param reason    the reason to remove the index
          * @param extraInfo extra information that will be used for logging and reporting
          */
         void removeIndex(Index index, IndexRemovalReason reason, String extraInfo);
@@ -827,7 +845,8 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         /**
          * Returns an IndexService for the specified index if exists otherwise returns <code>null</code>.
          */
-        @Nullable U indexService(Index index);
+        @Nullable
+        U indexService(Index index);
 
         /**
          * Creates shard for the specified shard routing and starts recovery,
