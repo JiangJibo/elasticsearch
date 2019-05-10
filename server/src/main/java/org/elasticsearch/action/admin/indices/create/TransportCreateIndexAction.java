@@ -34,6 +34,7 @@ import org.elasticsearch.threadpool.ThreadPool;
 import org.elasticsearch.transport.TransportService;
 
 /**
+ * 创建索引的action
  * Create index action.
  */
 public class TransportCreateIndexAction extends TransportMasterNodeAction<CreateIndexRequest, CreateIndexResponse> {
@@ -44,7 +45,9 @@ public class TransportCreateIndexAction extends TransportMasterNodeAction<Create
     public TransportCreateIndexAction(Settings settings, TransportService transportService, ClusterService clusterService,
                                       ThreadPool threadPool, MetaDataCreateIndexService createIndexService,
                                       ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver) {
-        super(settings, CreateIndexAction.NAME, transportService, clusterService, threadPool, actionFilters, indexNameExpressionResolver, CreateIndexRequest::new);
+        // 指定处理action名称为  "indices:admin/create" 的请求
+        super(settings, CreateIndexAction.NAME, transportService, clusterService, threadPool, actionFilters, indexNameExpressionResolver,
+            CreateIndexRequest::new);
         this.createIndexService = createIndexService;
     }
 
@@ -64,6 +67,13 @@ public class TransportCreateIndexAction extends TransportMasterNodeAction<Create
         return state.blocks().indexBlockedException(ClusterBlockLevel.METADATA_WRITE, request.index());
     }
 
+    /**
+     * master操作
+     *
+     * @param request
+     * @param state
+     * @param listener
+     */
     @Override
     protected void masterOperation(final CreateIndexRequest request, final ClusterState state, final ActionListener<CreateIndexResponse> listener) {
         String cause = request.cause();
@@ -72,14 +82,15 @@ public class TransportCreateIndexAction extends TransportMasterNodeAction<Create
         }
 
         final String indexName = indexNameExpressionResolver.resolveDateMathExpression(request.index());
-        final CreateIndexClusterStateUpdateRequest updateRequest = new CreateIndexClusterStateUpdateRequest(request, cause, indexName, request.index(), request.updateAllTypes())
-                .ackTimeout(request.timeout()).masterNodeTimeout(request.masterNodeTimeout())
-                .settings(request.settings()).mappings(request.mappings())
-                .aliases(request.aliases()).customs(request.customs())
-                .waitForActiveShards(request.waitForActiveShards());
+        final CreateIndexClusterStateUpdateRequest updateRequest = new CreateIndexClusterStateUpdateRequest(request, cause, indexName, request.index(),
+            request.updateAllTypes())
+            .ackTimeout(request.timeout()).masterNodeTimeout(request.masterNodeTimeout())
+            .settings(request.settings()).mappings(request.mappings())
+            .aliases(request.aliases()).customs(request.customs())
+            .waitForActiveShards(request.waitForActiveShards());
 
         createIndexService.createIndex(updateRequest, ActionListener.wrap(response ->
-            listener.onResponse(new CreateIndexResponse(response.isAcknowledged(), response.isShardsAcknowledged(), indexName)),
+                listener.onResponse(new CreateIndexResponse(response.isAcknowledged(), response.isShardsAcknowledged(), indexName)),
             listener::onFailure));
     }
 

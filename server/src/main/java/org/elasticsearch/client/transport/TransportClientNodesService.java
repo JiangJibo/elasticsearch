@@ -106,7 +106,9 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
     private final TransportClient.HostFailureListener hostFailureListener;
 
     // TODO: migrate this to use low level connections and single type channels
-    /** {@link ConnectionProfile} to use when to connecting to the listed nodes and doing a liveness check */
+    /**
+     * {@link ConnectionProfile} to use when to connecting to the listed nodes and doing a liveness check
+     */
     private static final ConnectionProfile LISTED_NODES_PROFILE;
 
     static {
@@ -121,7 +123,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
     }
 
     TransportClientNodesService(Settings settings, TransportService transportService,
-                                       ThreadPool threadPool, TransportClient.HostFailureListener hostFailureListener) {
+                                ThreadPool threadPool, TransportClient.HostFailureListener hostFailureListener) {
         super(settings);
         this.clusterName = ClusterName.CLUSTER_NAME_SETTING.get(settings);
         this.transportService = transportService;
@@ -190,7 +192,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
             List<DiscoveryNode> builder = new ArrayList<>(listedNodes);
             for (TransportAddress transportAddress : filtered) {
                 DiscoveryNode node = new DiscoveryNode("#transport#-" + tempNodeIdGenerator.incrementAndGet(),
-                        transportAddress, Collections.emptyMap(), Collections.emptySet(), minCompatibilityVersion);
+                    transportAddress, Collections.emptyMap(), Collections.emptySet(), minCompatibilityVersion);
                 logger.debug("adding address [{}]", node);
                 builder.add(node);
             }
@@ -243,8 +245,10 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
             throw new IllegalStateException("transport client is closed");
         }
         ensureNodesAreAvailable(nodes);
+        // 随机生成指定发送的节点序号
         int index = getNodeNumber();
         RetryListener<Response> retryListener = new RetryListener<>(callback, listener, nodes, index, hostFailureListener);
+        // 获取指定序号的节点
         DiscoveryNode node = retryListener.getNode(0);
         try {
             callback.doWithNode(node, retryListener);
@@ -259,6 +263,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
     }
 
     public static class RetryListener<Response> implements ActionListener<Response> {
+
         private final NodeListenerCallback<Response> callback;
         private final ActionListener<Response> listener;
         private final List<DiscoveryNode> nodes;
@@ -268,7 +273,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
         private volatile int i;
 
         RetryListener(NodeListenerCallback<Response> callback, ActionListener<Response> listener,
-                             List<DiscoveryNode> nodes, int index, TransportClient.HostFailureListener hostFailureListener) {
+                      List<DiscoveryNode> nodes, int index, TransportClient.HostFailureListener hostFailureListener) {
             this.callback = callback;
             this.listener = listener;
             this.nodes = nodes;
@@ -285,14 +290,14 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
         public void onFailure(Exception e) {
             Throwable throwable = ExceptionsHelper.unwrapCause(e);
             if (throwable instanceof ConnectTransportException) {
-                maybeNodeFailed(getNode(this.i), (ConnectTransportException) throwable);
+                maybeNodeFailed(getNode(this.i), (ConnectTransportException)throwable);
                 int i = ++this.i;
                 if (i >= nodes.size()) {
                     listener.onFailure(new NoNodeAvailableException("None of the configured nodes were available: " + nodes, e));
                 } else {
                     try {
                         callback.doWithNode(getNode(i), this);
-                    } catch(final Exception inner) {
+                    } catch (final Exception inner) {
                         inner.addSuppressed(e);
                         // this exception can't come from the TransportService as it doesn't throw exceptions at all
                         listener.onFailure(inner);
@@ -332,6 +337,11 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
         }
     }
 
+    /**
+     * 随机生成指定发送的节点序号
+     *
+     * @return
+     */
     private int getNodeNumber() {
         int index = randomNodeGenerator.incrementAndGet();
         if (index < 0) {
@@ -349,6 +359,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
     }
 
     abstract class NodeSampler {
+
         public void sample() {
             synchronized (mutex) {
                 if (closed) {
@@ -384,6 +395,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
     }
 
     class ScheduledNodeSampler implements Runnable {
+
         @Override
         public void run() {
             try {
@@ -404,7 +416,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
             HashSet<DiscoveryNode> newNodes = new HashSet<>();
             HashSet<DiscoveryNode> newFilteredNodes = new HashSet<>();
             for (DiscoveryNode listedNode : listedNodes) {
-                try (Transport.Connection connection = transportService.openConnection(listedNode, LISTED_NODES_PROFILE)){
+                try (Transport.Connection connection = transportService.openConnection(listedNode, LISTED_NODES_PROFILE)) {
                     final PlainTransportFuture<LivenessResponse> handler = new PlainTransportFuture<>(
                         new FutureTransportResponseHandler<LivenessResponse>() {
                             @Override
@@ -482,7 +494,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
                                 hostFailureListener.onNodeDisconnected(nodeToPing, e);
                             } else {
                                 logger.info(() -> new ParameterizedMessage(
-                                        "failed to get local cluster state info for {}, disconnecting...", nodeToPing), e);
+                                    "failed to get local cluster state info for {}, disconnecting...", nodeToPing), e);
                             }
                         }
 
@@ -526,7 +538,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
                                     @Override
                                     public void handleException(TransportException e) {
                                         logger.info(() -> new ParameterizedMessage(
-                                                "failed to get local cluster state for {}, disconnecting...", nodeToPing), e);
+                                            "failed to get local cluster state for {}, disconnecting...", nodeToPing), e);
                                         try {
                                             hostFailureListener.onNodeDisconnected(nodeToPing, e);
                                         } finally {
@@ -548,7 +560,7 @@ final class TransportClientNodesService extends AbstractComponent implements Clo
             for (Map.Entry<DiscoveryNode, ClusterStateResponse> entry : clusterStateResponses.entrySet()) {
                 if (!ignoreClusterName && !clusterName.equals(entry.getValue().getClusterName())) {
                     logger.warn("node {} not part of the cluster {}, ignoring...",
-                            entry.getValue().getState().nodes().getLocalNode(), clusterName);
+                        entry.getValue().getState().nodes().getLocalNode(), clusterName);
                     newFilteredNodes.add(entry.getKey());
                     continue;
                 }

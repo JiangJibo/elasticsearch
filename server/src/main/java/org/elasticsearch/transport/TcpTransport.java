@@ -71,6 +71,7 @@ import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.monitor.jvm.JvmInfo;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.transport.ConnectionProfile.ConnectionTypeHandle;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -256,15 +257,30 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         }
     }
 
+    /**
+     * 从Settings构建默认的链接配置,会在 {@link #openConnection(DiscoveryNode, ConnectionProfile)} 里用到
+     * 同一对ES节点创建多个连接
+     * 把生成连接的序号和支持的操作类型 放进 {@link ConnectionTypeHandle}  中,到时候可以根据操作类型获取连接
+     *
+     * @param settings
+     * @return
+     */
     static ConnectionProfile buildDefaultConnectionProfile(Settings settings) {
+        //做数据回复的连接数,默认2个
         int connectionsPerNodeRecovery = CONNECTIONS_PER_NODE_RECOVERY.get(settings);
+        // 用于bulk请求,默认3个
         int connectionsPerNodeBulk = CONNECTIONS_PER_NODE_BULK.get(settings);
+        // 典型的搜索和单doc索引，默认个数6个；
         int connectionsPerNodeReg = CONNECTIONS_PER_NODE_REG.get(settings);
+        // 如集群state的发送等，默认个数1个；
         int connectionsPerNodeState = CONNECTIONS_PER_NODE_STATE.get(settings);
+        // node之间的ping,默认个数1个；
         int connectionsPerNodePing = CONNECTIONS_PER_NODE_PING.get(settings);
         ConnectionProfile.Builder builder = new ConnectionProfile.Builder();
         builder.setConnectTimeout(TCP_CONNECT_TIMEOUT.get(settings));
         builder.setHandshakeTimeout(TCP_CONNECT_TIMEOUT.get(settings));
+
+        // 把生成连接的序号和支持的操作类型 放进 ConnectionTypeHandle 中,到时候可以根据操作类型获取连接
         builder.addConnections(connectionsPerNodeBulk, TransportRequestOptions.Type.BULK);
         builder.addConnections(connectionsPerNodePing, TransportRequestOptions.Type.PING);
         // if we are not master eligible we don't need a dedicated channel to publish the state
@@ -415,18 +431,30 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
 
     public final class NodeChannels implements Connection {
 
+        /**
+         * 操作类型 >> 可用的连接 之间的映射
+         */
         private final Map<TransportRequestOptions.Type, ConnectionProfile.ConnectionTypeHandle> typeMapping;
         private final List<TcpChannel> channels;
         private final DiscoveryNode node;
         private final AtomicBoolean closed = new AtomicBoolean(false);
         private final Version version;
 
+        /**
+         * 构建一对节点间的连接集合
+         *
+         * @param node
+         * @param channels
+         * @param connectionProfile
+         * @param handshakeVersion
+         */
         NodeChannels(DiscoveryNode node, List<TcpChannel> channels, ConnectionProfile connectionProfile, Version handshakeVersion) {
             this.node = node;
             this.channels = Collections.unmodifiableList(channels);
             assert channels.size() == connectionProfile.getNumConnections() : "expected channels size to be == "
                 + connectionProfile.getNumConnections() + " but was: [" + channels.size() + "]";
             typeMapping = new EnumMap<>(TransportRequestOptions.Type.class);
+            // 将连接的操作类型和链接映射起来
             for (ConnectionProfile.ConnectionTypeHandle handle : connectionProfile.getHandles()) {
                 for (TransportRequestOptions.Type type : handle.getTypes()) { typeMapping.put(type, handle); }
             }
@@ -442,6 +470,17 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             return channels;
         }
 
+        /**
+         * 根据操作类型获取连接
+         * {@link TransportRequestOptions.Type#RECOVERY}
+         * {@link TransportRequestOptions.Type#BULK}
+         * {@link TransportRequestOptions.Type#REG}
+         * {@link TransportRequestOptions.Type#STATE}
+         * {@link TransportRequestOptions.Type#PING}
+         *
+         * @param type
+         * @return
+         */
         public TcpChannel channel(TransportRequestOptions.Type type) {
             ConnectionProfile.ConnectionTypeHandle connectionTypeHandle = typeMapping.get(type);
             if (connectionTypeHandle == null) {
@@ -505,6 +544,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             if (closed.get()) {
                 throw new NodeNotConnectedException(node, "connection already closed");
             }
+            // 根据操作类型来获取Channel
             TcpChannel channel = channel(options.type());
             sendRequestToChannel(this.node, channel, requestId, action, request, options, getVersion(), (byte)0);
         }
@@ -614,6 +654,14 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         return resolveConnectionProfile(connectionProfile, defaultConnectionProfile);
     }
 
+    /**
+     * 打开连接,调用{@link org.elasticsearch.transport.netty4.Netty4Transport#initiateChannel(DiscoveryNode, TimeValue, ActionListener)}
+     * 用 {@link org.elasticsearch.transport.netty4.Netty4Transport#bootstrap} 连接远程server
+     *
+     * @param node
+     * @param connectionProfile
+     * @return
+     */
     @Override
     public final NodeChannels openConnection(DiscoveryNode node, ConnectionProfile connectionProfile) {
         if (node == null) {
@@ -626,14 +674,17 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         try {
             ensureOpen();
             try {
+                // 获取要创建的链接的总数, 参考 {@link #buildDefaultConnectionProfile(...)}
                 int numConnections = connectionProfile.getNumConnections();
                 assert numConnections > 0 : "A connection profile must be configured with at least one connection";
                 List<TcpChannel> channels = new ArrayList<>(numConnections);
                 List<ActionFuture<Void>> connectionFutures = new ArrayList<>(numConnections);
+                // 同时打开多个连接
                 for (int i = 0; i < numConnections; ++i) {
                     try {
                         PlainActionFuture<Void> connectFuture = PlainActionFuture.newFuture();
                         connectionFutures.add(connectFuture);
+                        // 调用 Netty4Transport 来打开连接
                         TcpChannel channel = initiateChannel(node, connectionProfile.getConnectTimeout(), connectFuture);
                         logger.trace(() -> new ParameterizedMessage("Tcp transport client channel opened: {}", channel));
                         channels.add(channel);
@@ -657,6 +708,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 handshakeChannel.addCloseListener(ActionListener.wrap(() -> cancelHandshakeForChannel(handshakeChannel)));
                 Version version;
                 try {
+                    // 获取远程ES节点的版本
                     version = executeHandshake(node, handshakeChannel, connectionProfile.getHandshakeTimeout());
                 } catch (Exception ex) {
                     TcpChannel.closeChannels(channels, false);
@@ -795,6 +847,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
 
         List<InetSocketAddress> boundAddresses = new ArrayList<>();
         for (InetAddress hostAddress : hostAddresses) {
+            // 绑定端口
             boundAddresses.add(bindToPort(profileSettings.profileName, hostAddress, profileSettings.portOrRange));
         }
 
@@ -1609,6 +1662,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         transportService.onRequestReceived(requestId, action);
         TransportChannel transportChannel = null;
         try {
+            // 如果是TCP握手包
             if (TransportStatus.isHandshake(status)) {
                 final VersionHandshakeResponse response = new VersionHandshakeResponse(getCurrentVersion());
                 sendResponse(version, features, channel, response, requestId, HANDSHAKE_ACTION_NAME, TransportResponseOptions.EMPTY,
@@ -1629,6 +1683,7 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
                 request.remoteAddress(new TransportAddress(remoteAddress));
                 // in case we throw an exception, i.e. when the limit is hit, we don't want to verify
                 validateRequest(stream, requestId, action);
+                // 最终调用 RequestHandlerRegistry注册的handler的messageReceived方法
                 threadPool.executor(reg.getExecutor()).execute(new RequestHandler(reg, request, transportChannel));
             }
         } catch (Exception e) {
@@ -1728,6 +1783,16 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
         }
     }
 
+    /**
+     * 执行握手,获取远程ES节点的版本信息
+     *
+     * @param node
+     * @param channel
+     * @param timeout
+     * @return
+     * @throws IOException
+     * @throws InterruptedException
+     */
     protected Version executeHandshake(DiscoveryNode node, TcpChannel channel, TimeValue timeout)
         throws IOException, InterruptedException {
         numHandshakes.inc();
@@ -1749,6 +1814,8 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
             // we also have no payload on the request but the response will contain the actual version of the node we talk
             // to as the payload.
             final Version minCompatVersion = getCurrentVersion().minimumCompatibilityVersion();
+
+            // 发送握手请求
             sendRequestToChannel(node, channel, requestId, HANDSHAKE_ACTION_NAME, TransportRequest.Empty.INSTANCE,
                 TransportRequestOptions.EMPTY, minCompatVersion, TransportStatus.setHandshake((byte)0));
             if (handler.latch.await(timeout.millis(), TimeUnit.MILLISECONDS) == false) {

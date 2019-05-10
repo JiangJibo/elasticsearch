@@ -56,6 +56,7 @@ import org.elasticsearch.common.util.BigArrays;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.indices.breaker.CircuitBreakerService;
 import org.elasticsearch.threadpool.ThreadPool;
+import org.elasticsearch.transport.Netty4Plugin;
 import org.elasticsearch.transport.TcpChannel;
 import org.elasticsearch.transport.TcpTransport;
 import org.elasticsearch.transport.TransportRequestOptions;
@@ -74,6 +75,10 @@ import static org.elasticsearch.common.util.concurrent.ConcurrentCollections.new
 import static org.elasticsearch.common.util.concurrent.EsExecutors.daemonThreadFactory;
 
 /**
+ * 每个节点4种链接：low/med/high/ping
+ *
+ * {@link #settings} 会通过 {@link Netty4Plugin#getSettings()} 来注入,将当前类的一些常量添加到settings中
+ *
  * There are 4 types of connections per node, low/med/high/ping. Low if for batch oriented APIs (like recovery or
  * batch) with high payload that will cause regular request. (like search or single index) to take
  * longer. Med is for the typical search / single doc index. And High for things like cluster state. Ping is reserved for
@@ -86,6 +91,7 @@ public class Netty4Transport extends TcpTransport {
     }
 
     public static final Setting<Integer> WORKER_COUNT =
+        // worker线程组的线程池数,默认物理核心数*2
         new Setting<>("transport.netty.worker_count",
             (s) -> Integer.toString(EsExecutors.numberOfProcessors(s) * 2),
             (s) -> Setting.parseInt(s, 1, "transport.netty.worker_count"), Property.NodeScope);
@@ -99,12 +105,16 @@ public class Netty4Transport extends TcpTransport {
     public static final Setting<Integer> NETTY_BOSS_COUNT =
         intSetting("transport.netty.boss_count", 1, 1, Property.NodeScope);
 
-
     protected final RecvByteBufAllocator recvByteBufAllocator;
     protected final int workerCount;
     protected final ByteSizeValue receivePredictorMin;
     protected final ByteSizeValue receivePredictorMax;
     protected volatile Bootstrap bootstrap;
+
+    /**
+     * 每一个{@link ProfileSettings} 生成一个 ServerBootstrap
+     * 按{@link ProfileSettings#profileName}存放在此
+     */
     protected final Map<String, ServerBootstrap> serverBootstraps = newConcurrentMap();
 
     public Netty4Transport(Settings settings, ThreadPool threadPool, NetworkService networkService, BigArrays bigArrays,
@@ -117,10 +127,10 @@ public class Netty4Transport extends TcpTransport {
         this.receivePredictorMin = NETTY_RECEIVE_PREDICTOR_MIN.get(settings);
         this.receivePredictorMax = NETTY_RECEIVE_PREDICTOR_MAX.get(settings);
         if (receivePredictorMax.getBytes() == receivePredictorMin.getBytes()) {
-            recvByteBufAllocator = new FixedRecvByteBufAllocator((int) receivePredictorMax.getBytes());
+            recvByteBufAllocator = new FixedRecvByteBufAllocator((int)receivePredictorMax.getBytes());
         } else {
-            recvByteBufAllocator = new AdaptiveRecvByteBufAllocator((int) receivePredictorMin.getBytes(),
-                (int) receivePredictorMin.getBytes(), (int) receivePredictorMax.getBytes());
+            recvByteBufAllocator = new AdaptiveRecvByteBufAllocator((int)receivePredictorMin.getBytes(),
+                (int)receivePredictorMin.getBytes(), (int)receivePredictorMax.getBytes());
         }
     }
 
@@ -128,8 +138,10 @@ public class Netty4Transport extends TcpTransport {
     protected void doStart() {
         boolean success = false;
         try {
+            // 创建 client 的bootstrap
             bootstrap = createBootstrap();
             if (NetworkService.NETWORK_SERVER.get(settings)) {
+                // 每一份配置生成一个serverBootstrap, 放进 : serverBootstraps.put(name, serverBootstrap);
                 for (ProfileSettings profileSettings : profileSettings) {
                     createServerBootstrap(profileSettings);
                     bindServer(profileSettings);
@@ -144,22 +156,30 @@ public class Netty4Transport extends TcpTransport {
         }
     }
 
+    /**
+     * 创建worker bootstrap
+     *
+     * @return
+     */
     private Bootstrap createBootstrap() {
         final Bootstrap bootstrap = new Bootstrap();
+        // workerCount, 线程组的线程池数,默认物理核心数*2
         bootstrap.group(new NioEventLoopGroup(workerCount, daemonThreadFactory(settings, TRANSPORT_CLIENT_BOSS_THREAD_NAME_PREFIX)));
         bootstrap.channel(NioSocketChannel.class);
-
+        // 设置处理请求的handlers
         bootstrap.handler(getClientChannelInitializer());
-
+        // 连接超时设置
         bootstrap.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, Math.toIntExact(defaultConnectionProfile.getConnectTimeout().millis()));
+        // tcp小包无延迟,默认true
         bootstrap.option(ChannelOption.TCP_NODELAY, TCP_NO_DELAY.get(settings));
+        // 保持长连接,默认true
         bootstrap.option(ChannelOption.SO_KEEPALIVE, TCP_KEEP_ALIVE.get(settings));
-
+        // tcp发送缓冲区,默认未设置
         final ByteSizeValue tcpSendBufferSize = TCP_SEND_BUFFER_SIZE.get(settings);
         if (tcpSendBufferSize.getBytes() > 0) {
             bootstrap.option(ChannelOption.SO_SNDBUF, Math.toIntExact(tcpSendBufferSize.getBytes()));
         }
-
+        // tcp接收缓冲区,默认未设置
         final ByteSizeValue tcpReceiveBufferSize = TCP_RECEIVE_BUFFER_SIZE.get(settings);
         if (tcpReceiveBufferSize.getBytes() > 0) {
             bootstrap.option(ChannelOption.SO_RCVBUF, Math.toIntExact(tcpReceiveBufferSize.getBytes()));
@@ -175,6 +195,11 @@ public class Netty4Transport extends TcpTransport {
         return bootstrap;
     }
 
+    /**
+     * 创建server bootstrap
+     *
+     * @param profileSettings
+     */
     private void createServerBootstrap(ProfileSettings profileSettings) {
         String name = profileSettings.profileName;
         if (logger.isDebugEnabled()) {
@@ -190,14 +215,13 @@ public class Netty4Transport extends TcpTransport {
                 receivePredictorMin, receivePredictorMax);
         }
 
-
         final ThreadFactory workerFactory = daemonThreadFactory(this.settings, TRANSPORT_SERVER_WORKER_THREAD_NAME_PREFIX, name);
 
         final ServerBootstrap serverBootstrap = new ServerBootstrap();
 
         serverBootstrap.group(new NioEventLoopGroup(workerCount, workerFactory));
         serverBootstrap.channel(NioServerSocketChannel.class);
-
+        // 设置子group的chileHandler
         serverBootstrap.childHandler(getServerChannelInitializer(name));
 
         serverBootstrap.childOption(ChannelOption.TCP_NODELAY, profileSettings.tcpNoDelay);
@@ -235,12 +259,22 @@ public class Netty4Transport extends TcpTransport {
         final Throwable unwrapped = ExceptionsHelper.unwrap(cause, ElasticsearchException.class);
         final Throwable t = unwrapped != null ? unwrapped : cause;
         Channel channel = ctx.channel();
-        onException(channel.attr(CHANNEL_KEY).get(), t instanceof Exception ? (Exception) t : new ElasticsearchException(t));
+        onException(channel.attr(CHANNEL_KEY).get(), t instanceof Exception ? (Exception)t : new ElasticsearchException(t));
     }
 
+    /**
+     * 初始化连接
+     *
+     * @param node           the node
+     * @param connectTimeout the connection timeout
+     * @param listener
+     * @return
+     * @throws IOException
+     */
     @Override
     protected NettyTcpChannel initiateChannel(DiscoveryNode node, TimeValue connectTimeout, ActionListener<Void> listener)
         throws IOException {
+        // 连接其他节点
         ChannelFuture channelFuture = bootstrap.connect(node.getAddress().address());
         Channel channel = channelFuture.channel();
         if (channel == null) {
@@ -261,7 +295,7 @@ public class Netty4Transport extends TcpTransport {
                     Netty4Utils.maybeDie(cause);
                     listener.onFailure(new Exception(cause));
                 } else {
-                    listener.onFailure((Exception) cause);
+                    listener.onFailure((Exception)cause);
                 }
             }
         });
@@ -294,7 +328,7 @@ public class Netty4Transport extends TcpTransport {
                 future.v2().awaitUninterruptibly();
                 if (!future.v2().isSuccess()) {
                     logger.debug(
-                        (Supplier<?>) () -> new ParameterizedMessage(
+                        (Supplier<?>)() -> new ParameterizedMessage(
                             "Error closing server bootstrap for profile [{}]", future.v1()), future.v2().cause());
                 }
             }
@@ -318,7 +352,7 @@ public class Netty4Transport extends TcpTransport {
             //可以看到其没有做日志记录操作，源码注释说明因为TcpTransport会做日志记录
             ch.pipeline().addLast("logging", new ESLoggingHandler());
             //注册解码器，这里没有注册编码器因为编码是在TcpTransport实现的，
-            //需要发送的报文到达Channel已经是编码之后的格式了
+            //需要发送的报文到达Channel已经是编码之后的格式了, 基于header size 来处理粘包
             ch.pipeline().addLast("size", new Netty4SizeHeaderFrameDecoder());
             // using a dot as a prefix means this cannot come from any settings parsed
             //负责对报文进行处理，主要识别是request还是response
@@ -333,6 +367,9 @@ public class Netty4Transport extends TcpTransport {
         }
     }
 
+    /**
+     * 服务端的ChannelInitializer
+     */
     protected class ServerChannelInitializer extends ChannelInitializer<Channel> {
 
         protected final String name;

@@ -219,9 +219,10 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
      *
      * @param type   The mapping type
      * @param source The mapping source
-     * @param xContentType the content type of the mapping source
+     * @param xContentType the content type of the mapping source 一般情况下是{@link XContentType#JSON}
      */
     private CreateIndexRequest mapping(String type, BytesReference source, XContentType xContentType) {
+        //  不能含有相同的type
         if (mappings.containsKey(type)) {
             throw new IllegalStateException("mappings for type \"" + type + "\" were already defined");
         }
@@ -276,7 +277,7 @@ public class CreateIndexRequest extends AcknowledgedRequest<CreateIndexRequest> 
         }
     }
 
-    /**
+    /** 添加映射
      * A specialized simplified mapping source method, takes the form of simple properties definition:
      * ("field1", "type=string,store=true").
      */

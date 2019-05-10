@@ -33,6 +33,7 @@ import org.elasticsearch.common.xcontent.XContentType;
 import java.util.Map;
 
 /**
+ * 构建索引创建请求
  * Builder for a create index request
  */
 public class CreateIndexRequestBuilder extends AcknowledgedRequestBuilder<CreateIndexRequest, CreateIndexResponse, CreateIndexRequestBuilder> {
@@ -96,8 +97,8 @@ public class CreateIndexRequestBuilder extends AcknowledgedRequestBuilder<Create
     /**
      * Adds mapping that will be added when the index gets created.
      *
-     * @param type   The mapping type
-     * @param source The mapping source
+     * @param type         The mapping type
+     * @param source       The mapping source
      * @param xContentType The content type of the source
      */
     public CreateIndexRequestBuilder addMapping(String type, String source, XContentType xContentType) {
@@ -240,8 +241,11 @@ public class CreateIndexRequestBuilder extends AcknowledgedRequestBuilder<Create
         return this;
     }
 
-    /** True if all fields that span multiple types should be updated, false otherwise
-     * @deprecated useless with 6.x indices which may only have one type */
+    /**
+     * True if all fields that span multiple types should be updated, false otherwise
+     *
+     * @deprecated useless with 6.x indices which may only have one type
+     */
     @Deprecated
     public CreateIndexRequestBuilder setUpdateAllTypes(boolean updateAllTypes) {
         request.updateAllTypes(updateAllTypes);

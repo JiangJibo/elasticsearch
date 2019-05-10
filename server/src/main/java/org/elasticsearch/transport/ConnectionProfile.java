@@ -127,6 +127,7 @@ public final class ConnectionProfile {
             }
             addedTypes.addAll(Arrays.asList(types));
             handles.add(new ConnectionTypeHandle(offset, numConnections, EnumSet.copyOf(Arrays.asList(types))));
+            // 连接数增加
             offset += numConnections;
         }
 
