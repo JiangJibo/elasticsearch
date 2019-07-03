@@ -71,8 +71,10 @@ public class DateMathParserTests extends ESTestCase {
         assertDateMathEquals("2014-11-12T22:55:00.000Z", "2014-11-12T22:55:00.000Z", 0, true, null);
         assertDateMathEquals("2014-11-12T22:55:00.000Z", "2014-11-12T22:55:00.000Z", 0, false, null);
 
-        assertDateMathEquals("2014-11-12T22:55:00.000", "2014-11-12T21:55:00.000Z", 0, true, DateTimeZone.forID("+01:00"));
-        assertDateMathEquals("2014-11-12T22:55:00.000", "2014-11-12T21:55:00.000Z", 0, false, DateTimeZone.forID("+01:00"));
+        assertDateMathEquals("2014-11-12T22:55:00.000", "2014-11-12T21:55:00.000Z", 0, true,
+            DateTimeZone.forID("+01:00"));
+        assertDateMathEquals("2014-11-12T22:55:00.000", "2014-11-12T21:55:00.000Z", 0, false,
+            DateTimeZone.forID("+01:00"));
 
         assertDateMathEquals("2014-11-12T22:55:00.000+01:00", "2014-11-12T21:55:00.000Z", 0, true, null);
         assertDateMathEquals("2014-11-12T22:55:00.000+01:00", "2014-11-12T21:55:00.000Z", 0, false, null);
@@ -102,7 +104,8 @@ public class DateMathParserTests extends ESTestCase {
         assertDateMathEquals("2014-05-30T18:21", "2014-05-30T18:21:00.000", 0, false, DateTimeZone.forID("-0000"));
 
         // and timezone in the date has priority
-        assertDateMathEquals("2014-05-30T20:21+03:00", "2014-05-30T17:21:00.000", 0, false, DateTimeZone.forID("-08:00"));
+        assertDateMathEquals("2014-05-30T20:21+03:00", "2014-05-30T17:21:00.000", 0, false,
+            DateTimeZone.forID("-08:00"));
         assertDateMathEquals("2014-05-30T20:21Z", "2014-05-30T20:21:00.000", 0, false, DateTimeZone.forID("-08:00"));
     }
 
@@ -143,7 +146,6 @@ public class DateMathParserTests extends ESTestCase {
         assertDateMathEquals("2014-11-18||+1M/M+1h", "2014-12-01T01");
     }
 
-
     public void testNow() {
         final long now = parser.parse("2014-11-18T14:27:32", () -> 0, false, null);
 
@@ -161,11 +163,11 @@ public class DateMathParserTests extends ESTestCase {
         FormatDateTimeFormatter formatter = Joda.forPattern("HH:mm:ss");
         DateMathParser parser = new DateMathParser(formatter);
         assertEquals(
-                this.formatter.parser().parseMillis("1970-01-01T04:52:20.000Z"),
-                parser.parse("04:52:20", () -> 0, false, null));
+            this.formatter.parser().parseMillis("1970-01-01T04:52:20.000Z"),
+            parser.parse("04:52:20", () -> 0, false, null));
         assertEquals(
-                this.formatter.parser().parseMillis("1970-01-01T04:52:20.999Z"),
-                parser.parse("04:52:20", () -> 0, true, null));
+            this.formatter.parser().parseMillis("1970-01-01T04:52:20.999Z"),
+            parser.parse("04:52:20", () -> 0, true, null));
     }
 
     // Implicit rounding happening when parts of the date are not specified
@@ -216,7 +218,8 @@ public class DateMathParserTests extends ESTestCase {
         assertDateMathEquals("2014-11-18||/w", "2014-11-17T01:00:00.000Z", 0, false, DateTimeZone.forID("-01:00"));
         assertDateMathEquals("2014-11-18||/w", "2014-11-16T23:00:00.000Z", 0, false, DateTimeZone.forID("CET"));
         assertDateMathEquals("2014-11-18||/w", "2014-11-23T22:59:59.999Z", 0, true, DateTimeZone.forID("CET"));
-        assertDateMathEquals("2014-07-22||/w", "2014-07-20T22:00:00.000Z", 0, false, DateTimeZone.forID("CET")); // with DST
+        assertDateMathEquals("2014-07-22||/w", "2014-07-20T22:00:00.000Z", 0, false,
+            DateTimeZone.forID("CET")); // with DST
 
         assertDateMathEquals("2014-11-18T14||/d", "2014-11-18", 0, false, null);
         assertDateMathEquals("2014-11-18T14||/d", "2014-11-18T23:59:59.999", 0, true, null);
@@ -274,15 +277,18 @@ public class DateMathParserTests extends ESTestCase {
     }
 
     public void testIllegalMathFormat() {
-        assertParseException("Expected date math unsupported operator exception", "2014-11-18||*5", "operator not supported");
+        assertParseException("Expected date math unsupported operator exception", "2014-11-18||*5",
+            "operator not supported");
         assertParseException("Expected date math incompatible rounding exception", "2014-11-18||/2m", "rounding");
-        assertParseException("Expected date math illegal unit type exception", "2014-11-18||+2a", "unit [a] not supported");
+        assertParseException("Expected date math illegal unit type exception", "2014-11-18||+2a",
+            "unit [a] not supported");
         assertParseException("Expected date math truncation exception", "2014-11-18||+12", "truncated");
         assertParseException("Expected date math truncation exception", "2014-11-18||-", "truncated");
     }
 
     public void testIllegalDateFormat() {
-        assertParseException("Expected bad timestamp exception", Long.toString(Long.MAX_VALUE) + "0", "failed to parse date field");
+        assertParseException("Expected bad timestamp exception", Long.toString(Long.MAX_VALUE) + "0",
+            "failed to parse date field");
         assertParseException("Expected bad date format exception", "123bogus", "with format");
     }
 
@@ -303,9 +309,31 @@ public class DateMathParserTests extends ESTestCase {
         try {
             parser.parse("1234567890123", () -> 42, false, DateTimeZone.forTimeZone(TimeZone.getTimeZone("CET")));
             fail("Expected ElasticsearchParseException");
-        } catch(ElasticsearchParseException e) {
+        } catch (ElasticsearchParseException e) {
             assertThat(e.getMessage(), containsString("failed to parse date field"));
             assertThat(e.getMessage(), containsString("with format [epoch_millis]"));
         }
     }
+
+    /**
+     * 解析时间戳形式的时间
+     * 解析时间戳形式时,可以不指定时区，时区默认是UTC,但不能指定为UTC之外的时区,
+     */
+    public void testParseEpochMillisTime() {
+        formatter = Joda.forPattern("strict_date_optional_time||epoch_millis");
+        parser = new DateMathParser(formatter);
+        long gotMillis = parser.parse("1562050800000", () -> 0, false, DateTimeZone.forID("+08:00"));
+        System.out.println(gotMillis);
+    }
+
+    /**
+     *
+     */
+    public void testParseStrictDateOptionalTime() {
+        formatter = Joda.forPattern("strict_date_optional_time||epoch_millis");
+        parser = new DateMathParser(formatter);
+        long gotMillis = parser.parse("2014-11-16T14:27:32", () -> 0, false, DateTimeZone.forID("+08:00"));
+        System.out.println(gotMillis);
+    }
+
 }

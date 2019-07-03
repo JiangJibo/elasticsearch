@@ -60,10 +60,15 @@ import java.util.Objects;
 
 import static org.elasticsearch.index.mapper.TypeParsers.parseDateTimeFormatter;
 
-/** A {@link FieldMapper} for ip addresses. */
+/**
+ * A {@link FieldMapper} for ip addresses.
+ * */
 public class DateFieldMapper extends FieldMapper {
 
     public static final String CONTENT_TYPE = "date";
+    /**
+     * es处理时间的默认格式, 使用
+     */
     public static final FormatDateTimeFormatter DEFAULT_DATE_TIME_FORMATTER = Joda.forPattern(
             "strict_date_optional_time||epoch_millis", Locale.ROOT);
 
