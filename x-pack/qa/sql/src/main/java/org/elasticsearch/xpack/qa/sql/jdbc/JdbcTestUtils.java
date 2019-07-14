@@ -5,11 +5,6 @@
  */
 package org.elasticsearch.xpack.qa.sql.jdbc;
 
-import org.apache.logging.log4j.Logger;
-import org.elasticsearch.xpack.sql.plugin.CliFormatter;
-import org.elasticsearch.xpack.sql.plugin.ColumnInfo;
-import org.elasticsearch.xpack.sql.plugin.SqlQueryResponse;
-
 import java.sql.JDBCType;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
@@ -17,6 +12,11 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.apache.logging.log4j.Logger;
+import org.elasticsearch.xpack.sql.plugin.CliFormatter;
+import org.elasticsearch.xpack.sql.plugin.ColumnInfo;
+import org.elasticsearch.xpack.sql.plugin.SqlQueryResponse;
 
 public abstract class JdbcTestUtils {
 
