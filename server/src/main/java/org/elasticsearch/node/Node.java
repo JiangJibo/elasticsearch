@@ -262,6 +262,7 @@ public class Node implements Closeable {
         }
         try {
             originalSettings = environment.settings();
+            // 收集所有配置
             Settings tmpSettings = Settings.builder().put(environment.settings())
                 .put(Client.CLIENT_TYPE_SETTING_S.getKey(), CLIENT_TYPE).build();
 
@@ -275,6 +276,7 @@ public class Node implements Closeable {
             // 是否在参数中指定了节点名称
             final boolean hadPredefinedNodeName = NODE_NAME_SETTING.exists(tmpSettings);
             final String nodeId = nodeEnvironment.nodeId();
+            // 是否把 node.name 配置加到settings里
             tmpSettings = addNodeNameIfNeeded(tmpSettings, nodeId);
             final Logger logger = Loggers.getLogger(Node.class, tmpSettings);
             // this must be captured after the node name is possibly added to the settings
@@ -284,7 +286,7 @@ public class Node implements Closeable {
             } else {
                 logger.info("node name [{}], node ID [{}]", nodeName, nodeId);
             }
-
+            // 获取jvm相关数据, 比如命令行参赛
             final JvmInfo jvmInfo = JvmInfo.jvmInfo();
             logger.info(
                 "version[{}], pid[{}], build[{}/{}/{}/{}], OS[{}/{}/{}], JVM[{}/{}/{}/{}]",
@@ -309,6 +311,7 @@ public class Node implements Closeable {
                     environment.configFile(), Arrays.toString(environment.dataFiles()), environment.logsFile(), environment.pluginsFile());
             }
 
+            // 插件相关
             this.pluginsService = new PluginsService(tmpSettings, environment.configFile(), environment.modulesFile(), environment.pluginsFile(), classpathPlugins);
             this.settings = pluginsService.updatedSettings();
             localNodeFactory = new LocalNodeFactory(settings, nodeEnvironment.nodeId());
@@ -344,16 +347,18 @@ public class Node implements Closeable {
             scriptModule.registerClusterSettingsListeners(settingsModule.getClusterSettings());
             resourcesToClose.add(resourceWatcherService);
 
-            // 网络服务
+            // 服务发现插件
             final NetworkService networkService = new NetworkService(
                 getCustomNameResolvers(pluginsService.filterPlugins(DiscoveryPlugin.class)));
 
+            // 集群插件
             List<ClusterPlugin> clusterPlugins = pluginsService.filterPlugins(ClusterPlugin.class);
             // 集群服务
             final ClusterService clusterService = new ClusterService(settings, settingsModule.getClusterSettings(), threadPool,
                ClusterModule.getClusterStateCustomSuppliers(clusterPlugins));
             clusterService.addStateApplier(scriptModule.getScriptService());
             resourcesToClose.add(clusterService);
+
             final IngestService ingestService = new IngestService(settings, threadPool, this.environment,
                 scriptModule.getScriptService(), analysisModule.getAnalysisRegistry(), pluginsService.filterPlugins(IngestPlugin.class));
             final DiskThresholdMonitor listener = new DiskThresholdMonitor(settings, clusterService::state,

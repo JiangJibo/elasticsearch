@@ -359,6 +359,9 @@ import java.util.Map;
 public abstract class AbstractClient extends AbstractComponent implements Client {
 
     private final ThreadPool threadPool;
+    /**
+     *  持有 {@link IndicesAdmin} 和 {@link ClusterAdmin}
+     */
     private final Admin admin;
     private final ThreadedActionListener.Wrapper threadedWrapper;
 

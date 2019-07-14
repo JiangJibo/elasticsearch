@@ -158,6 +158,9 @@ public class ThreadPool extends AbstractComponent implements Scheduler, Closeabl
         THREAD_POOL_TYPES = Collections.unmodifiableMap(map);
     }
 
+    /**
+     * {@link Names} 里每个组件及其相应的线程池持有者
+     */
     private Map<String, ExecutorHolder> executors = new HashMap<>();
 
     private final CachedTimeThread cachedTimeThread;
@@ -166,6 +169,9 @@ public class ThreadPool extends AbstractComponent implements Scheduler, Closeabl
 
     private final ThreadContext threadContext;
 
+    /**
+     * {@link Names} 里每个组件及其相应的线程池构建器
+     */
     private final Map<String, ExecutorBuilder> builders;
 
     private final ScheduledThreadPoolExecutor scheduler;
@@ -185,9 +191,9 @@ public class ThreadPool extends AbstractComponent implements Scheduler, Closeabl
         final Map<String, ExecutorBuilder> builders = new HashMap<>();
         // 可用核心数目,取物理核心数量
         final int availableProcessors = EsExecutors.numberOfProcessors(settings);
-        // 取 核心数+1 /2 与 5的较小值
+        // 取 (核心数+1) /2 与 5的较小值
         final int halfProcMaxAt5 = halfNumberOfProcessorsMaxFive(availableProcessors);
-        // 取 核心数+1 /2 与 10的较小值
+        // 取 (核心数+1) /2 与 10的较小值
         final int halfProcMaxAt10 = halfNumberOfProcessorsMaxTen(availableProcessors);
         // 线程池最大线程数，取 128与4倍核心数的较大值,但不大于 512
         final int genericThreadPoolMax = boundedBy(4 * availableProcessors, 128, 512);
@@ -223,6 +229,7 @@ public class ThreadPool extends AbstractComponent implements Scheduler, Closeabl
 
         final Map<String, ExecutorHolder> executors = new HashMap<>();
         for (@SuppressWarnings("unchecked") final Map.Entry<String, ExecutorBuilder> entry : builders.entrySet()) {
+            // 是否在配置里指定了组件的线程池配置
             final ExecutorBuilder.ExecutorSettings executorSettings = entry.getValue().getSettings(settings);
             final ExecutorHolder executorHolder = entry.getValue().build(executorSettings, threadContext);
             if (executors.containsKey(executorHolder.info.getName())) {
