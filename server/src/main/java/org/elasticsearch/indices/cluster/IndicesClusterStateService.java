@@ -194,6 +194,11 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
     protected void doClose() {
     }
 
+    /**
+     * 启动集群服务
+     *
+     * @param event
+     */
     @Override
     public synchronized void applyClusterState(final ClusterChangedEvent event) {
         if (!lifecycle.started()) {
@@ -558,6 +563,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         try {
             logger.debug("{} creating shard", shardRouting.shardId());
             RecoveryState recoveryState = new RecoveryState(shardRouting, nodes.getLocalNode(), sourceNode);
+            // 创建分片
             indicesService.createShard(shardRouting, recoveryState, recoveryTargetService, new RecoveryListener(shardRouting),
                 repositoriesService, failedShardHandler, globalCheckpointSyncer);
         } catch (Exception e) {

@@ -135,13 +135,14 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
         Objects.requireNonNull(state.get(), "please set initial state before starting");
         addListener(localNodeMasterListeners);
         threadPoolExecutor = EsExecutors.newSinglePrioritizing(
-                nodeName() + "/" + CLUSTER_UPDATE_THREAD_NAME,
-                daemonThreadFactory(settings, CLUSTER_UPDATE_THREAD_NAME),
-                threadPool.getThreadContext(),
-                threadPool.scheduler());
+            nodeName() + "/" + CLUSTER_UPDATE_THREAD_NAME,
+            daemonThreadFactory(settings, CLUSTER_UPDATE_THREAD_NAME),
+            threadPool.getThreadContext(),
+            threadPool.scheduler());
     }
 
     class UpdateTask extends SourcePrioritizedRunnable implements Function<ClusterState, ClusterState> {
+
         final ClusterStateTaskListener listener;
         final Function<ClusterState, ClusterState> updateFunction;
 
@@ -354,21 +355,27 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
         }
     }
 
-    /** asserts that the current thread is the cluster state update thread */
+    /**
+     * asserts that the current thread is the cluster state update thread
+     */
     public static boolean assertClusterStateUpdateThread() {
         assert Thread.currentThread().getName().contains(ClusterApplierService.CLUSTER_UPDATE_THREAD_NAME) :
             "not called from the cluster state update thread";
         return true;
     }
 
-    /** asserts that the current thread is <b>NOT</b> the cluster state update thread */
+    /**
+     * asserts that the current thread is <b>NOT</b> the cluster state update thread
+     */
     public static boolean assertNotClusterStateUpdateThread(String reason) {
         assert Thread.currentThread().getName().contains(CLUSTER_UPDATE_THREAD_NAME) == false :
             "Expected current thread [" + Thread.currentThread() + "] to not be the cluster state update thread. Reason: [" + reason + "]";
         return true;
     }
 
-    /** asserts that the current stack trace does <b>NOT</b> involve a cluster state applier */
+    /**
+     * asserts that the current stack trace does <b>NOT</b> involve a cluster state applier
+     */
     private static boolean assertNotCalledFromClusterStateApplier(String reason) {
         if (Thread.currentThread().getName().contains(CLUSTER_UPDATE_THREAD_NAME)) {
             for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
@@ -386,6 +393,11 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
         return true;
     }
 
+    /**
+     * 启动集群更新服务
+     *
+     * @param task
+     */
     protected void runTask(UpdateTask task) {
         if (!lifecycle.started()) {
             logger.debug("processing [{}]: ignoring, cluster applier service not started", task.source);
@@ -513,6 +525,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
     }
 
     private static class SafeClusterStateTaskListener implements ClusterStateTaskListener {
+
         private final ClusterStateTaskListener listener;
         private final Logger logger;
 
@@ -528,7 +541,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
             } catch (Exception inner) {
                 inner.addSuppressed(e);
                 logger.error(new ParameterizedMessage(
-                        "exception thrown by listener notifying of failure from [{}]", source), inner);
+                    "exception thrown by listener notifying of failure from [{}]", source), inner);
             }
         }
 
@@ -538,9 +551,9 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
                 listener.clusterStateProcessed(source, oldState, newState);
             } catch (Exception e) {
                 logger.error(new ParameterizedMessage(
-                        "exception thrown by listener while notifying of cluster state processed from [{}], old cluster state:\n" +
-                            "{}\nnew cluster state:\n{}",
-                        source, oldState, newState), e);
+                    "exception thrown by listener while notifying of cluster state processed from [{}], old cluster state:\n" +
+                        "{}\nnew cluster state:\n{}",
+                    source, oldState, newState), e);
             }
         }
     }
@@ -553,6 +566,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
     }
 
     class NotifyTimeout implements Runnable {
+
         final TimeoutClusterStateListener listener;
         final TimeValue timeout;
         volatile ScheduledFuture future;

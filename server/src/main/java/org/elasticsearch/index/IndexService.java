@@ -132,27 +132,27 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
     private Supplier<Sort> indexSortSupplier;
 
     public IndexService(
-            IndexSettings indexSettings,
-            NodeEnvironment nodeEnv,
-            NamedXContentRegistry xContentRegistry,
-            SimilarityService similarityService,
-            ShardStoreDeleter shardStoreDeleter,
-            AnalysisRegistry registry,
-            @Nullable EngineFactory engineFactory,
-            CircuitBreakerService circuitBreakerService,
-            BigArrays bigArrays,
-            ThreadPool threadPool,
-            ScriptService scriptService,
-            Client client,
-            QueryCache queryCache,
-            IndexStore indexStore,
-            IndexEventListener eventListener,
-            IndexModule.IndexSearcherWrapperFactory wrapperFactory,
-            MapperRegistry mapperRegistry,
-            IndicesFieldDataCache indicesFieldDataCache,
-            List<SearchOperationListener> searchOperationListeners,
-            List<IndexingOperationListener> indexingOperationListeners,
-            NamedWriteableRegistry namedWriteableRegistry) throws IOException {
+        IndexSettings indexSettings,
+        NodeEnvironment nodeEnv,
+        NamedXContentRegistry xContentRegistry,
+        SimilarityService similarityService,
+        ShardStoreDeleter shardStoreDeleter,
+        AnalysisRegistry registry,
+        @Nullable EngineFactory engineFactory,
+        CircuitBreakerService circuitBreakerService,
+        BigArrays bigArrays,
+        ThreadPool threadPool,
+        ScriptService scriptService,
+        Client client,
+        QueryCache queryCache,
+        IndexStore indexStore,
+        IndexEventListener eventListener,
+        IndexModule.IndexSearcherWrapperFactory wrapperFactory,
+        MapperRegistry mapperRegistry,
+        IndicesFieldDataCache indicesFieldDataCache,
+        List<SearchOperationListener> searchOperationListeners,
+        List<IndexingOperationListener> indexingOperationListeners,
+        NamedWriteableRegistry namedWriteableRegistry) throws IOException {
         super(indexSettings);
         this.indexSettings = indexSettings;
         this.xContentRegistry = xContentRegistry;
@@ -278,18 +278,17 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
                 }
             } finally {
                 IOUtils.close(
-                        bitsetFilterCache,
-                        indexCache,
-                        indexFieldData,
-                        mapperService,
-                        refreshTask,
-                        fsyncTask,
-                        trimTranslogTask,
-                        globalCheckpointTask);
+                    bitsetFilterCache,
+                    indexCache,
+                    indexFieldData,
+                    mapperService,
+                    refreshTask,
+                    fsyncTask,
+                    trimTranslogTask,
+                    globalCheckpointTask);
             }
         }
     }
-
 
     public String indexUUID() {
         return indexSettings.getUUID();
@@ -310,6 +309,14 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
         }
     }
 
+    /**
+     * 创建分片
+     *
+     * @param routing
+     * @param globalCheckpointSyncer
+     * @return
+     * @throws IOException
+     */
     public synchronized IndexShard createShard(ShardRouting routing, Consumer<ShardId> globalCheckpointSyncer) throws IOException {
         /*
          * TODO: we execute this in parallel but it's a synced method. Yet, we might
@@ -371,13 +378,13 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
             logger.debug("creating shard_id {}", shardId);
             // if we are on a shared FS we only own the shard (ie. we can safely delete it) if we are the primary.
             final Engine.Warmer engineWarmer = (searcher) -> {
-                IndexShard shard =  getShardOrNull(shardId.getId());
+                IndexShard shard = getShardOrNull(shardId.getId());
                 if (shard != null) {
                     warmer.warm(searcher, shard, IndexService.this.indexSettings);
                 }
             };
             store = new Store(shardId, this.indexSettings, indexStore.newDirectoryService(path), lock,
-                    new StoreCloseListener(shardId, () -> eventListener.onStoreClosed(shardId)));
+                new StoreCloseListener(shardId, () -> eventListener.onStoreClosed(shardId)));
             indexShard = new IndexShard(routing, this.indexSettings, path, store, indexSortSupplier,
                 indexCache, mapperService, similarityService, engineFactory,
                 eventListener, searcherWrapper, threadPool, bigArrays, engineWarmer,
@@ -452,7 +459,6 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
         }
     }
 
-
     private void onShardClose(ShardLock lock) {
         if (deleted.get()) { // we remove that shards content if this index has been deleted
             try {
@@ -486,8 +492,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
     public QueryShardContext newQueryShardContext(int shardId, IndexReader indexReader, LongSupplier nowInMillis, String clusterAlias) {
         return new QueryShardContext(
             shardId, indexSettings, indexCache.bitsetFilterCache(), indexFieldData::getForField, mapperService(),
-                similarityService(), scriptService, xContentRegistry,
-               namedWriteableRegistry, client, indexReader,
+            similarityService(), scriptService, xContentRegistry,
+            namedWriteableRegistry, client, indexReader,
             nowInMillis, clusterAlias);
     }
 
@@ -526,6 +532,7 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
     }
 
     private class StoreCloseListener implements Store.OnClose {
+
         private final ShardId shardId;
         private final Closeable[] toClose;
 
@@ -551,6 +558,7 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
     }
 
     private static final class BitsetCacheListener implements BitsetFilterCache.Listener {
+
         final IndexService indexService;
 
         private BitsetCacheListener(IndexService indexService) {
@@ -581,6 +589,7 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
     }
 
     private final class FieldDataCacheListener implements IndexFieldDataCache.Listener {
+
         final IndexService indexService;
 
         FieldDataCacheListener(IndexService indexService) {
@@ -654,6 +663,7 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
     }
 
     public interface ShardStoreDeleter {
+
         void deleteShardStore(String reason, ShardLock lock, IndexSettings indexSettings) throws IOException;
 
         void addPendingDelete(ShardId shardId, IndexSettings indexSettings);
@@ -738,22 +748,22 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
                     case STARTED:
                         try {
                             shard.acquirePrimaryOperationPermit(
-                                    ActionListener.wrap(
-                                            releasable -> {
-                                                try (Releasable ignored = releasable) {
-                                                        shard.maybeSyncGlobalCheckpoint("background");
-                                                }
-                                            },
-                                            e -> {
-                                                if (!(e instanceof AlreadyClosedException || e instanceof IndexShardClosedException)) {
-                                                    logger.info(
-                                                            new ParameterizedMessage(
-                                                                    "{} failed to execute background global checkpoint sync",
-                                                                    shard.shardId()),
-                                                            e);
-                                                }
-                                            }),
-                                    ThreadPool.Names.SAME, "background global checkpoint sync");
+                                ActionListener.wrap(
+                                    releasable -> {
+                                        try (Releasable ignored = releasable) {
+                                            shard.maybeSyncGlobalCheckpoint("background");
+                                        }
+                                    },
+                                    e -> {
+                                        if (!(e instanceof AlreadyClosedException || e instanceof IndexShardClosedException)) {
+                                            logger.info(
+                                                new ParameterizedMessage(
+                                                    "{} failed to execute background global checkpoint sync",
+                                                    shard.shardId()),
+                                                e);
+                                        }
+                                    }),
+                                ThreadPool.Names.SAME, "background global checkpoint sync");
                         } catch (final AlreadyClosedException | IndexShardClosedException e) {
                             // the shard was closed concurrently, continue
                         }
@@ -766,6 +776,7 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
     }
 
     abstract static class BaseAsyncTask implements Runnable, Closeable {
+
         protected final IndexService indexService;
         protected final ThreadPool threadPool;
         private final TimeValue interval;
@@ -934,12 +945,12 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
 
     // this setting is intentionally not registered, it is only used in tests
     public static final Setting<TimeValue> GLOBAL_CHECKPOINT_SYNC_INTERVAL_SETTING =
-            Setting.timeSetting(
-                    "index.global_checkpoint_sync.interval",
-                    new TimeValue(30, TimeUnit.SECONDS),
-                    new TimeValue(0, TimeUnit.MILLISECONDS),
-                    Property.Dynamic,
-                    Property.IndexScope);
+        Setting.timeSetting(
+            "index.global_checkpoint_sync.interval",
+            new TimeValue(30, TimeUnit.SECONDS),
+            new TimeValue(0, TimeUnit.MILLISECONDS),
+            Property.Dynamic,
+            Property.IndexScope);
 
     /**
      * Background task that syncs the global checkpoint to replicas.
@@ -982,7 +993,7 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
     /**
      * Clears the caches for the given shard id if the shard is still allocated on this node
      */
-    public boolean clearCaches(boolean queryCache, boolean fieldDataCache, String...fields) {
+    public boolean clearCaches(boolean queryCache, boolean fieldDataCache, String... fields) {
         boolean clearedAtLeastOne = false;
         if (queryCache) {
             clearedAtLeastOne = true;
@@ -999,7 +1010,7 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
             }
         }
         if (clearedAtLeastOne == false) {
-            if (fields.length ==  0) {
+            if (fields.length == 0) {
                 indexCache.clear("api");
                 indexFieldData.clear();
             } else {
