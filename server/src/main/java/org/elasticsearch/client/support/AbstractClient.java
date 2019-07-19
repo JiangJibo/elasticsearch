@@ -408,8 +408,7 @@ public abstract class AbstractClient extends AbstractComponent implements Client
      */
     @Override
     public final <Request extends ActionRequest, Response extends ActionResponse, RequestBuilder extends ActionRequestBuilder<Request, Response,
-        RequestBuilder>> void execute(
-        Action<Request, Response, RequestBuilder> action, Request request, ActionListener<Response> listener) {
+        RequestBuilder>> void execute( Action<Request, Response, RequestBuilder> action, Request request, ActionListener<Response> listener) {
         listener = threadedWrapper.wrap(listener);
         doExecute(action, request, listener);
     }

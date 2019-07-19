@@ -178,12 +178,23 @@ import static java.util.stream.Collectors.toList;
  */
 public class Node implements Closeable {
 
-
+    /**
+     *
+     */
     public static final Setting<Boolean> WRITE_PORTS_FILE_SETTING =
         Setting.boolSetting("node.portsfile", false, Property.NodeScope);
+    /**
+     * 显式指定数据节点
+     */
     public static final Setting<Boolean> NODE_DATA_SETTING = Setting.boolSetting("node.data", true, Property.NodeScope);
+    /**
+     *  显式指定Master节点
+     */
     public static final Setting<Boolean> NODE_MASTER_SETTING =
         Setting.boolSetting("node.master", true, Property.NodeScope);
+    /**
+     * 显式指定预处理节点
+     */
     public static final Setting<Boolean> NODE_INGEST_SETTING =
         Setting.boolSetting("node.ingest", true, Property.NodeScope);
 
@@ -358,11 +369,14 @@ public class Node implements Closeable {
                ClusterModule.getClusterStateCustomSuppliers(clusterPlugins));
             clusterService.addStateApplier(scriptModule.getScriptService());
             resourcesToClose.add(clusterService);
-
+            // 预处理节点服务, 预处理节点会以pipeline形式对数据做预处理
             final IngestService ingestService = new IngestService(settings, threadPool, this.environment,
                 scriptModule.getScriptService(), analysisModule.getAnalysisRegistry(), pluginsService.filterPlugins(IngestPlugin.class));
+
+            // 磁盘阈值监视器
             final DiskThresholdMonitor listener = new DiskThresholdMonitor(settings, clusterService::state,
                 clusterService.getClusterSettings(), client);
+            // 集群信息服务
             final ClusterInfoService clusterInfoService = newClusterInfoService(settings, clusterService, threadPool, client,
                 listener::onNewInfo);
             final UsageService usageService = new UsageService(settings);
@@ -372,23 +386,28 @@ public class Node implements Closeable {
             for (Module pluginModule : pluginsService.createGuiceModules()) {
                 modules.add(pluginModule);
             }
+            // 集群状态监控服务
             final MonitorService monitorService = new MonitorService(settings, nodeEnvironment, threadPool, clusterInfoService);
+            // 集群模块
             ClusterModule clusterModule = new ClusterModule(settings, clusterService, clusterPlugins, clusterInfoService);
             modules.add(clusterModule);
             IndicesModule indicesModule = new IndicesModule(pluginsService.filterPlugins(MapperPlugin.class));
             modules.add(indicesModule);
-
+            // 搜搜模块
             SearchModule searchModule = new SearchModule(settings, false, pluginsService.filterPlugins(SearchPlugin.class));
+            // 熔断服务
             CircuitBreakerService circuitBreakerService = createCircuitBreakerService(settingsModule.getSettings(),
                 settingsModule.getClusterSettings());
             resourcesToClose.add(circuitBreakerService);
             modules.add(new GatewayModule());
 
-
+            // 页缓冲循环使用器
             PageCacheRecycler pageCacheRecycler = createPageCacheRecycler(settings);
+            // 大数组
             BigArrays bigArrays = createBigArrays(pageCacheRecycler, circuitBreakerService);
             resourcesToClose.add(bigArrays);
             modules.add(settingsModule);
+
             List<NamedWriteableRegistry.Entry> namedWriteables = Stream.of(
                 NetworkModule.getNamedWriteables().stream(),
                 indicesModule.getNamedWriteables().stream(),
@@ -418,7 +437,7 @@ public class Node implements Closeable {
                                                  scriptModule.getScriptService(), xContentRegistry, environment, nodeEnvironment,
                                                  namedWriteableRegistry).stream())
                 .collect(Collectors.toList());
-
+            // Action模块
             ActionModule actionModule = new ActionModule(false, settings, clusterModule.getIndexNameExpressionResolver(),
                 settingsModule.getIndexScopedSettings(), settingsModule.getClusterSettings(), settingsModule.getSettingsFilter(),
                 threadPool, pluginsService.filterPlugins(ActionPlugin.class), client, circuitBreakerService, usageService);
@@ -426,6 +445,7 @@ public class Node implements Closeable {
 
             // 处理Rest请求的Controller
             final RestController restController = actionModule.getRestController();
+            // 网络模块
             final NetworkModule networkModule = new NetworkModule(settings, false, pluginsService.filterPlugins(NetworkPlugin.class),
                 threadPool, bigArrays, pageCacheRecycler, circuitBreakerService, namedWriteableRegistry, xContentRegistry,
                 networkService, restController);
@@ -445,6 +465,7 @@ public class Node implements Closeable {
             final GatewayMetaState gatewayMetaState = new GatewayMetaState(settings, nodeEnvironment, metaStateService,
                 metaDataIndexUpgradeService, metaDataUpgrader);
             new TemplateUpgradeService(settings, client, clusterService, threadPool, indexTemplateMetaDataUpgraders);
+            // Netty4Transport 传输器
             final Transport transport = networkModule.getTransportSupplier().get();
             Set<String> taskHeaders = Stream.concat(
                 pluginsService.filterPlugins(ActionPlugin.class).stream().flatMap(p -> p.getTaskHeaders().stream()),
@@ -486,18 +507,18 @@ public class Node implements Closeable {
             final SearchService searchService = newSearchService(clusterService, indicesService,
                 threadPool, scriptModule.getScriptService(), bigArrays, searchModule.getFetchPhase(),
                 responseCollectorService);
-
+            // 持久化任务执行器
             final List<PersistentTasksExecutor<?>> tasksExecutors = pluginsService
                 .filterPlugins(PersistentTaskPlugin.class).stream()
                 .map(p -> p.getPersistentTasksExecutor(clusterService, threadPool, client))
                 .flatMap(List::stream)
                 .collect(toList());
-
+            // 持久化任务执行器注册器
             final PersistentTasksExecutorRegistry registry = new PersistentTasksExecutorRegistry(settings, tasksExecutors);
             final PersistentTasksClusterService persistentTasksClusterService =
                 new PersistentTasksClusterService(settings, registry, clusterService);
             final PersistentTasksService persistentTasksService = new PersistentTasksService(settings, clusterService, threadPool, client);
-
+            // Guice 自动注入
             modules.add(b -> {
                     b.bind(Node.class).toInstance(this);
                     b.bind(NodeService.class).toInstance(nodeService);
@@ -548,6 +569,7 @@ public class Node implements Closeable {
                     b.bind(PersistentTasksExecutorRegistry.class).toInstance(registry);
                 }
             );
+            // 创建注入器
             injector = modules.createInjector();
 
             // TODO hack around circular dependencies problems in AllocationService
@@ -646,6 +668,7 @@ public class Node implements Closeable {
         logger.info("starting ...");
         pluginLifecycleComponents.forEach(LifecycleComponent::start);
 
+        // 启动各个组件
         injector.getInstance(MappingUpdatedAction.class).setClient(client);
         injector.getInstance(IndicesService.class).start();
         injector.getInstance(IndicesClusterStateService.class).start();
@@ -672,6 +695,7 @@ public class Node implements Closeable {
         transportService.getTaskManager().setTaskResultsService(injector.getInstance(TaskResultsService.class));
         // 启动Netty4Transport,也就是启动内置的Netty容器,处理TPC/IP请求
         transportService.start();
+
         assert localNodeFactory.getNode() != null;
         assert transportService.getLocalNode().equals(localNodeFactory.getNode())
             : "transportService has a different local node than the factory provided";

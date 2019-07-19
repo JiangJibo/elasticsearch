@@ -24,24 +24,31 @@ import org.elasticsearch.cluster.ClusterStateTaskListener;
 
 import java.util.function.Supplier;
 
+/**
+ * 集群应用者
+ */
 public interface ClusterApplier {
     /**
      * Sets the initial state for this applier. Should only be called once.
+     *
      * @param initialState the initial state to set
      */
     void setInitialState(ClusterState initialState);
 
     /**
+     * 集群状态变更时触发
      * Method to invoke when a new cluster state is available to be applied
      *
-     * @param source information where the cluster state came from
+     * @param source               information where the cluster state came from
      * @param clusterStateSupplier the cluster state supplier which provides the latest cluster state to apply
-     * @param listener callback that is invoked after cluster state is applied
+     * @param listener             callback that is invoked after cluster state is applied
      */
-    void onNewClusterState(String source, Supplier<ClusterState> clusterStateSupplier, ClusterStateTaskListener listener);
+    void onNewClusterState(String source, Supplier<ClusterState> clusterStateSupplier,
+        ClusterStateTaskListener listener);
 
     /**
-     * Creates a new cluster state builder that is initialized with the cluster name and all initial cluster state customs.
+     * Creates a new cluster state builder that is initialized with the cluster name and all initial cluster state
+     * customs.
      */
     ClusterState.Builder newClusterStateBuilder();
 

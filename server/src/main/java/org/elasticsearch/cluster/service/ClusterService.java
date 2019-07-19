@@ -49,6 +49,9 @@ import java.util.function.Supplier;
  */
 public class ClusterService extends AbstractLifecycleComponent {
 
+    /**
+     * Master节点服务
+     */
     private final MasterService masterService;
 
     private final ClusterApplierService clusterApplierService;
@@ -100,7 +103,9 @@ public class ClusterService extends AbstractLifecycleComponent {
 
     @Override
     protected synchronized void doStart() {
+        // 启动集群应用者服务
         clusterApplierService.start();
+        // 启动Master服务
         masterService.start();
     }
 

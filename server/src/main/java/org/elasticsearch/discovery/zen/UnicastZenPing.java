@@ -100,7 +100,8 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
     public static final Setting<Integer> DISCOVERY_ZEN_PING_UNICAST_CONCURRENT_CONNECTS_SETTING =
         Setting.intSetting("discovery.zen.ping.unicast.concurrent_connects", 10, 0, Property.NodeScope);
     public static final Setting<TimeValue> DISCOVERY_ZEN_PING_UNICAST_HOSTS_RESOLVE_TIMEOUT =
-        Setting.positiveTimeSetting("discovery.zen.ping.unicast.hosts.resolve_timeout", TimeValue.timeValueSeconds(5), Property.NodeScope);
+        Setting.positiveTimeSetting("discovery.zen.ping.unicast.hosts.resolve_timeout", TimeValue.timeValueSeconds(5),
+            Property.NodeScope);
 
     // these limits are per-address
     public static final int LIMIT_FOREIGN_PORTS_COUNT = 1;
@@ -110,8 +111,15 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
     private final TransportService transportService;
     private final ClusterName clusterName;
 
+    /**
+     * {@link #DISCOVERY_ZEN_PING_UNICAST_HOSTS_SETTING} 参数指定的host
+     */
     private final List<String> configuredHosts;
 
+    /**
+     * 如果 discovery.zen.ping.unicast.hosts 指定host, 默认 {@link #LIMIT_FOREIGN_PORTS_COUNT}
+     * 否则默认 {@link #LIMIT_LOCAL_PORTS_COUNT}
+     */
     private final int limitPortCounts;
 
     private final PingContextProvider contextProvider;
@@ -135,7 +143,7 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
     private volatile boolean closed = false;
 
     public UnicastZenPing(Settings settings, ThreadPool threadPool, TransportService transportService,
-                          UnicastHostsProvider unicastHostsProvider, PingContextProvider contextProvider) {
+        UnicastHostsProvider unicastHostsProvider, PingContextProvider contextProvider) {
         super(settings);
         this.threadPool = threadPool;
         this.transportService = transportService;
@@ -165,18 +173,20 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
 
         final ThreadFactory threadFactory = EsExecutors.daemonThreadFactory(settings, "[unicast_connect]");
         unicastZenPingExecutorService = EsExecutors.newScaling(
-                nodeName() + "/" + "unicast_connect",
-                0,
-                concurrentConnects,
-                60,
-                TimeUnit.SECONDS,
-                threadFactory,
-                threadPool.getThreadContext());
+            nodeName() + "/" + "unicast_connect",
+            0,
+            concurrentConnects,
+            60,
+            TimeUnit.SECONDS,
+            threadFactory,
+            threadPool.getThreadContext());
     }
 
     /**
-     * Resolves a list of hosts to a list of discovery nodes. Each host is resolved into a transport address (or a collection of addresses
-     * if the number of ports is greater than one) and the transport addresses are used to created discovery nodes. Host lookups are done
+     * Resolves a list of hosts to a list of discovery nodes. Each host is resolved into a transport address (or a
+     * collection of addresses
+     * if the number of ports is greater than one) and the transport addresses are used to created discovery nodes. Host
+     * lookups are done
      * in parallel using specified executor service up to the specified resolve timeout.
      *
      * @param executorService  the executor service used to parallelize hostname lookups
@@ -206,18 +216,22 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
             throw new IllegalArgumentException("resolve timeout must be non-negative but was [" + resolveTimeout + "]");
         }
         // create tasks to submit to the executor service; we will wait up to resolveTimeout for these tasks to complete
+        // 从 DISCOVERY_ZEN_PING_UNICAST_HOSTS_SETTING 参数指定的hosts
         final List<Callable<TransportAddress[]>> callables =
             hosts
                 .stream()
-                .map(hn -> (Callable<TransportAddress[]>) () -> transportService.addressesFromString(hn, limitPortCounts))
+                .map(
+                    hn -> (Callable<TransportAddress[]>)() -> transportService.addressesFromString(hn, limitPortCounts))
                 .collect(Collectors.toList());
+        //
         final List<Future<TransportAddress[]>> futures =
             executorService.invokeAll(callables, resolveTimeout.nanos(), TimeUnit.NANOSECONDS);
         final List<DiscoveryNode> discoveryNodes = new ArrayList<>();
         final Set<TransportAddress> localAddresses = new HashSet<>();
         localAddresses.add(transportService.boundAddress().publishAddress());
         localAddresses.addAll(Arrays.asList(transportService.boundAddress().boundAddresses()));
-        // ExecutorService#invokeAll guarantees that the futures are returned in the iteration order of the tasks so we can associate the
+        // ExecutorService#invokeAll guarantees that the futures are returned in the iteration order of the tasks so
+        // we can associate the
         // hostname with the corresponding task by iterating together
         final Iterator<String> it = hosts.iterator();
         for (final Future<TransportAddress[]> future : futures) {
@@ -271,10 +285,14 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
     }
 
     /**
-     * Sends three rounds of pings notifying the specified {@link Consumer} when pinging is complete. Pings are sent after resolving
-     * configured unicast hosts to their IP address (subject to DNS caching within the JVM). A batch of pings is sent, then another batch
-     * of pings is sent at half the specified {@link TimeValue}, and then another batch of pings is sent at the specified {@link TimeValue}.
-     * The pings that are sent carry a timeout of 1.25 times the specified {@link TimeValue}. When pinging each node, a connection and
+     * Sends three rounds of pings notifying the specified {@link Consumer} when pinging is complete. Pings are sent
+     * after resolving
+     * configured unicast hosts to their IP address (subject to DNS caching within the JVM). A batch of pings is sent,
+     * then another batch
+     * of pings is sent at half the specified {@link TimeValue}, and then another batch of pings is sent at the
+     * specified {@link TimeValue}.
+     * The pings that are sent carry a timeout of 1.25 times the specified {@link TimeValue}. When pinging each node, a
+     * connection and
      * handshake is performed, with a connection timeout of the specified {@link TimeValue}.
      *
      * @param resultsConsumer the callback when pinging is complete
@@ -290,10 +308,11 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
      * from the duration used for request level time outs. This is useful for testing
      */
     protected void ping(final Consumer<PingCollection> resultsConsumer,
-                        final TimeValue scheduleDuration,
-                        final TimeValue requestDuration) {
+        final TimeValue scheduleDuration,
+        final TimeValue requestDuration) {
         final List<DiscoveryNode> seedNodes;
         try {
+            // 获取参数 DISCOVERY_ZEN_PING_UNICAST_HOSTS_SETTING 配置的节点
             seedNodes = resolveHostsLists(
                 unicastZenPingExecutorService,
                 logger,
@@ -308,13 +327,16 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
         seedNodes.addAll(hostsProvider.buildDynamicNodes());
         final DiscoveryNodes nodes = contextProvider.clusterState().nodes();
         // add all possible master nodes that were active in the last known cluster configuration
+        // 通过上次的集群状态里获取节点信息
         for (ObjectCursor<DiscoveryNode> masterNode : nodes.getMasterNodes().values()) {
             seedNodes.add(masterNode.value);
         }
 
         final ConnectionProfile connectionProfile =
-            ConnectionProfile.buildSingleChannelProfile(TransportRequestOptions.Type.REG, requestDuration, requestDuration);
-        final PingingRound pingingRound = new PingingRound(pingingRoundIdGenerator.incrementAndGet(), seedNodes, resultsConsumer,
+            ConnectionProfile.buildSingleChannelProfile(TransportRequestOptions.Type.REG, requestDuration,
+                requestDuration);
+        final PingingRound pingingRound = new PingingRound(pingingRoundIdGenerator.incrementAndGet(), seedNodes,
+            resultsConsumer,
             nodes.getLocalNode(), connectionProfile);
         activePingingRounds.put(pingingRound.id(), pingingRound);
         final AbstractRunnable pingSender = new AbstractRunnable() {
@@ -331,8 +353,10 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
             }
         };
         threadPool.generic().execute(pingSender);
-        threadPool.schedule(TimeValue.timeValueMillis(scheduleDuration.millis() / 3), ThreadPool.Names.GENERIC, pingSender);
-        threadPool.schedule(TimeValue.timeValueMillis(scheduleDuration.millis() / 3 * 2), ThreadPool.Names.GENERIC, pingSender);
+        threadPool.schedule(TimeValue.timeValueMillis(scheduleDuration.millis() / 3), ThreadPool.Names.GENERIC,
+            pingSender);
+        threadPool.schedule(TimeValue.timeValueMillis(scheduleDuration.millis() / 3 * 2), ThreadPool.Names.GENERIC,
+            pingSender);
         threadPool.schedule(scheduleDuration, ThreadPool.Names.GENERIC, new AbstractRunnable() {
             @Override
             protected void doRun() throws Exception {
@@ -363,8 +387,9 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
 
         private AtomicBoolean closed = new AtomicBoolean(false);
 
-        PingingRound(int id, List<DiscoveryNode> seedNodes, Consumer<PingCollection> resultsConsumer, DiscoveryNode localNode,
-                     ConnectionProfile connectionProfile) {
+        PingingRound(int id, List<DiscoveryNode> seedNodes, Consumer<PingCollection> resultsConsumer,
+            DiscoveryNode localNode,
+            ConnectionProfile connectionProfile) {
             this.id = id;
             this.seedNodes = Collections.unmodifiableList(new ArrayList<>(seedNodes));
             this.pingListener = resultsConsumer;
@@ -452,14 +477,21 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
         }
     }
 
-
+    /**
+     * 发送一个ping确定是否存在
+     *
+     * @param timeout
+     * @param pingingRound
+     */
     protected void sendPings(final TimeValue timeout, final PingingRound pingingRound) {
         final ClusterState lastState = contextProvider.clusterState();
-        final UnicastPingRequest pingRequest = new UnicastPingRequest(pingingRound.id(), timeout, createPingResponse(lastState));
+        final UnicastPingRequest pingRequest = new UnicastPingRequest(pingingRound.id(), timeout,
+            createPingResponse(lastState));
 
         Set<DiscoveryNode> nodesFromResponses = temporalResponses.stream().map(pingResponse -> {
             assert clusterName.equals(pingResponse.clusterName()) :
-                "got a ping request from a different cluster. expected " + clusterName + " got " + pingResponse.clusterName();
+                "got a ping request from a different cluster. expected " + clusterName + " got " + pingResponse
+                    .clusterName();
             return pingResponse.node();
         }).collect(Collectors.toSet());
 
@@ -467,7 +499,6 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
         final Map<TransportAddress, DiscoveryNode> uniqueNodesByAddress =
             Stream.concat(pingingRound.getSeedNodes().stream(), nodesFromResponses.stream())
                 .collect(Collectors.toMap(DiscoveryNode::getAddress, Function.identity(), (n1, n2) -> n1));
-
 
         // resolve what we can via the latest cluster state
         final Set<DiscoveryNode> nodesToPing = uniqueNodesByAddress.values().stream()
@@ -484,7 +515,7 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
     }
 
     private void sendPingRequestToNode(final DiscoveryNode node, TimeValue timeout, final PingingRound pingingRound,
-                                       final UnicastPingRequest pingRequest) {
+        final UnicastPingRequest pingRequest) {
         submitToExecutor(new AbstractRunnable() {
             @Override
             protected void doRun() throws Exception {
@@ -494,7 +525,8 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
                         // concurrency can still cause disconnects
                         connection = transportService.getConnection(node);
                     } catch (NodeNotConnectedException e) {
-                        logger.trace("[{}] node [{}] just disconnected, will create a temp connection", pingingRound.id(), node);
+                        logger.trace("[{}] node [{}] just disconnected, will create a temp connection",
+                            pingingRound.id(), node);
                     }
                 }
 
@@ -504,7 +536,7 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
 
                 logger.trace("[{}] sending to {}", pingingRound.id(), node);
                 transportService.sendRequest(connection, ACTION_NAME, pingRequest,
-                    TransportRequestOptions.builder().withTimeout((long) (timeout.millis() * 1.25)).build(),
+                    TransportRequestOptions.builder().withTimeout((long)(timeout.millis() * 1.25)).build(),
                     getPingResponseHandler(pingingRound, node));
             }
 
@@ -516,15 +548,17 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
                 } else if (e instanceof RemoteTransportException) {
                     // something went wrong on the other side
                     logger.debug(() -> new ParameterizedMessage(
-                            "[{}] received a remote error as a response to ping {}", pingingRound.id(), node), e);
+                        "[{}] received a remote error as a response to ping {}", pingingRound.id(), node), e);
                 } else {
-                    logger.warn(() -> new ParameterizedMessage("[{}] failed send ping to {}", pingingRound.id(), node), e);
+                    logger.warn(() -> new ParameterizedMessage("[{}] failed send ping to {}", pingingRound.id(), node),
+                        e);
                 }
             }
 
             @Override
             public void onRejection(Exception e) {
-                // The RejectedExecutionException can come from the fact unicastZenPingExecutorService is at its max down in sendPings
+                // The RejectedExecutionException can come from the fact unicastZenPingExecutorService is at its max
+                // down in sendPings
                 // But don't bail here, we can retry later on after the send ping has been scheduled.
                 logger.debug("Ping execution rejected", e);
             }
@@ -538,7 +572,7 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
 
     // for testing
     protected TransportResponseHandler<UnicastPingResponse> getPingResponseHandler(final PingingRound pingingRound,
-                                                                                   final DiscoveryNode node) {
+        final DiscoveryNode node) {
         return new TransportResponseHandler<UnicastPingResponse>() {
 
             @Override
@@ -553,10 +587,12 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
 
             @Override
             public void handleResponse(UnicastPingResponse response) {
-                logger.trace("[{}] received response from {}: {}", pingingRound.id(), node, Arrays.toString(response.pingResponses));
+                logger.trace("[{}] received response from {}: {}", pingingRound.id(), node,
+                    Arrays.toString(response.pingResponses));
                 if (pingingRound.isClosed()) {
                     if (logger.isTraceEnabled()) {
-                        logger.trace("[{}] skipping received response from {}. already closed", pingingRound.id(), node);
+                        logger.trace("[{}] skipping received response from {}. already closed", pingingRound.id(),
+                            node);
                     }
                 } else {
                     Stream.of(response.pingResponses).forEach(pingingRound::addPingResponseToCollection);
@@ -578,7 +614,8 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
 
     private UnicastPingResponse handlePingRequest(final UnicastPingRequest request) {
         assert clusterName.equals(request.pingResponse.clusterName()) :
-            "got a ping request from a different cluster. expected " + clusterName + " got " + request.pingResponse.clusterName();
+            "got a ping request from a different cluster. expected " + clusterName + " got " + request.pingResponse
+                .clusterName();
         temporalResponses.add(request.pingResponse);
         // add to any ongoing pinging
         activePingingRounds.values().forEach(p -> p.addPingResponseToCollection(request.pingResponse));

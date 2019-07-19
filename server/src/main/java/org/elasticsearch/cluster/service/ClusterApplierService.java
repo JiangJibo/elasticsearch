@@ -66,6 +66,9 @@ import java.util.stream.Stream;
 import static org.elasticsearch.cluster.service.ClusterService.CLUSTER_SERVICE_SLOW_TASK_LOGGING_THRESHOLD_SETTING;
 import static org.elasticsearch.common.util.concurrent.EsExecutors.daemonThreadFactory;
 
+/**
+ * 集群应用者服务
+ */
 public class ClusterApplierService extends AbstractLifecycleComponent implements ClusterApplier {
 
     public static final String CLUSTER_UPDATE_THREAD_NAME = "clusterApplierService#updateTask";
@@ -134,9 +137,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
         Objects.requireNonNull(nodeConnectionsService, "please set the node connection service before starting");
         Objects.requireNonNull(state.get(), "please set initial state before starting");
         addListener(localNodeMasterListeners);
-        threadPoolExecutor = EsExecutors.newSinglePrioritizing(
-            nodeName() + "/" + CLUSTER_UPDATE_THREAD_NAME,
-            daemonThreadFactory(settings, CLUSTER_UPDATE_THREAD_NAME),
+        threadPoolExecutor = EsExecutors.newSinglePrioritizing(nodeName() + "/" + CLUSTER_UPDATE_THREAD_NAME, daemonThreadFactory(settings, CLUSTER_UPDATE_THREAD_NAME),
             threadPool.getThreadContext(),
             threadPool.scheduler());
     }

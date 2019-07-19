@@ -344,7 +344,7 @@ final class Bootstrap {
             Thread.setDefaultUncaughtExceptionHandler(
                 new ElasticsearchUncaughtExceptionHandler(() -> Node.NODE_NAME_SETTING.get(environment.settings())));
 
-            // 当前实例设置内置的Node
+            // 当前实例设置内置的Node, 实例化Node
             INSTANCE.setup(true, environment);
 
             try {

@@ -50,6 +50,7 @@ public interface ZenPing extends Releasable {
 
         // an always increasing unique identifier for this ping response.
         // lower values means older pings.
+        // 每次自增1
         private final long id;
 
         private final ClusterName clusterName;
@@ -68,6 +69,7 @@ public interface ZenPing extends Releasable {
          *                            ({@link ElectMasterService.MasterCandidate#UNRECOVERED_CLUSTER_VERSION} for not recovered)
          */
         PingResponse(DiscoveryNode node, DiscoveryNode master, ClusterName clusterName, long clusterStateVersion) {
+            // 每次生成时，id自增1
             this.id = idGenerator.incrementAndGet();
             this.node = node;
             this.master = master;

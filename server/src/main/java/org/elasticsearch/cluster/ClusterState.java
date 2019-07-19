@@ -66,6 +66,7 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
+ * 集群状态, 主要有 Master_Node 来维护
  * Represents the current state of the cluster.
  * <p>
  * The cluster state object is immutable with the exception of the {@link RoutingNodes} structure, which is
@@ -74,7 +75,8 @@ import java.util.Set;
  * single thread and controlled by the {@link ClusterService}. After every update the
  * {@link Discovery#publish} method publishes a new version of the cluster state to all other nodes in the
  * cluster.  The actual publishing mechanism is delegated to the {@link Discovery#publish} method and depends on
- * the type of discovery. In the Zen Discovery it is handled in the {@link PublishClusterStateAction#publish} method. The
+ * the type of discovery. In the Zen Discovery it is handled in the {@link PublishClusterStateAction#publish} method.
+ * The
  * publishing mechanism can be overridden by other discovery.
  * <p>
  * The cluster state implements the {@link Diffable} interface in order to support publishing of cluster state
@@ -90,7 +92,8 @@ import java.util.Set;
  */
 public class ClusterState implements ToXContentFragment, Diffable<ClusterState> {
 
-    public static final ClusterState EMPTY_STATE = builder(ClusterName.CLUSTER_NAME_SETTING.getDefault(Settings.EMPTY)).build();
+    public static final ClusterState EMPTY_STATE = builder(ClusterName.CLUSTER_NAME_SETTING.getDefault(Settings.EMPTY))
+        .build();
 
     /**
      * An interface that implementors use when a class requires a client to maybe have a feature.
@@ -110,11 +113,14 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
          * Tests whether or not the custom should be serialized. The criteria are:
          * <ul>
          * <li>the output stream must be at least the minimum supported version of the custom</li>
-         * <li>the output stream must have the feature required by the custom (if any) or not be a transport client</li>
+         * <li>the output stream must have the feature required by the custom (if any) or not be a transport
+         * client</li>
          * </ul>
          * <p>
-         * That is, we only serialize customs to clients than can understand the custom based on the version of the client and the features
-         * that the client has. For transport clients we can be lenient in requiring a feature in which case we do not send the custom but
+         * That is, we only serialize customs to clients than can understand the custom based on the version of the
+         * client and the features
+         * that the client has. For transport clients we can be lenient in requiring a feature in which case we do not
+         * send the custom but
          * for connected nodes we always require that the node has the required feature.
          *
          * @param out    the output stream
@@ -122,14 +128,16 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
          * @param <T>    the type of the custom
          * @return true if the custom should be serialized and false otherwise
          */
-        static <T extends VersionedNamedWriteable & FeatureAware> boolean shouldSerialize(final StreamOutput out, final T custom) {
+        static <T extends VersionedNamedWriteable & FeatureAware> boolean shouldSerialize(final StreamOutput out,
+            final T custom) {
             if (out.getVersion().before(custom.getMinimalSupportedVersion())) {
                 return false;
             }
             if (custom.getRequiredFeature().isPresent()) {
                 final String requiredFeature = custom.getRequiredFeature().get();
                 // if it is a transport client we are lenient yet for a connected node it must have the required feature
-                return out.hasFeature(requiredFeature) || out.hasFeature(TransportClient.TRANSPORT_CLIENT_FEATURE) == false;
+                return out.hasFeature(requiredFeature) || out.hasFeature(TransportClient.TRANSPORT_CLIENT_FEATURE)
+                    == false;
             }
             return true;
         }
@@ -139,7 +147,8 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
     public interface Custom extends NamedDiffable<Custom>, ToXContentFragment, FeatureAware {
 
         /**
-         * Returns <code>true</code> iff this {@link Custom} is private to the cluster and should never be send to a client.
+         * Returns <code>true</code> iff this {@link Custom} is private to the cluster and should never be send to a
+         * client.
          * The default is <code>false</code>;
          */
         default boolean isPrivate() {
@@ -148,7 +157,8 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
 
     }
 
-    private static final NamedDiffableValueSerializer<Custom> CUSTOM_VALUE_SERIALIZER = new NamedDiffableValueSerializer<>(Custom.class);
+    private static final NamedDiffableValueSerializer<Custom> CUSTOM_VALUE_SERIALIZER
+        = new NamedDiffableValueSerializer<>(Custom.class);
 
     public static final String UNKNOWN_UUID = "_na_";
 
@@ -176,12 +186,14 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
     private volatile RoutingNodes routingNodes;
 
     public ClusterState(long version, String stateUUID, ClusterState state) {
-        this(state.clusterName, version, stateUUID, state.metaData(), state.routingTable(), state.nodes(), state.blocks(), state.customs(),
+        this(state.clusterName, version, stateUUID, state.metaData(), state.routingTable(), state.nodes(),
+            state.blocks(), state.customs(),
             false);
     }
 
-    public ClusterState(ClusterName clusterName, long version, String stateUUID, MetaData metaData, RoutingTable routingTable,
-                        DiscoveryNodes nodes, ClusterBlocks blocks, ImmutableOpenMap<String, Custom> customs, boolean wasReadFromDiff) {
+    public ClusterState(ClusterName clusterName, long version, String stateUUID, MetaData metaData,
+        RoutingTable routingTable,
+        DiscoveryNodes nodes, ClusterBlocks blocks, ImmutableOpenMap<String, Custom> customs, boolean wasReadFromDiff) {
         this.version = version;
         this.stateUUID = stateUUID;
         this.clusterName = clusterName;
@@ -250,7 +262,7 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
     }
 
     public <T extends Custom> T custom(String type) {
-        return (T) customs.get(type);
+        return (T)customs.get(type);
     }
 
     public ClusterName getClusterName() {
@@ -316,13 +328,15 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
     }
 
     /**
-     * a cluster state supersedes another state if they are from the same master and the version of this state is higher than that of the
+     * a cluster state supersedes another state if they are from the same master and the version of this state is higher
+     * than that of the
      * other state.
      * <p>
      * In essence that means that all the changes from the other cluster state are also reflected by the current one
      */
     public boolean supersedes(ClusterState other) {
-        return this.nodes().getMasterNodeId() != null && this.nodes().getMasterNodeId().equals(other.nodes().getMasterNodeId())
+        return this.nodes().getMasterNodeId() != null && this.nodes().getMasterNodeId().equals(
+            other.nodes().getMasterNodeId())
             && this.version() > other.version();
 
     }
@@ -445,16 +459,16 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
 
                 builder.startObject("mappings");
                 for (ObjectObjectCursor<String, CompressedXContent> cursor1 : templateMetaData.mappings()) {
-                    Map<String, Object> mapping = XContentHelper.convertToMap(new BytesArray(cursor1.value.uncompressed()), false).v2();
+                    Map<String, Object> mapping = XContentHelper.convertToMap(
+                        new BytesArray(cursor1.value.uncompressed()), false).v2();
                     if (mapping.size() == 1 && mapping.containsKey(cursor1.key)) {
                         // the type name is the root value, reduce it
-                        mapping = (Map<String, Object>) mapping.get(cursor1.key);
+                        mapping = (Map<String, Object>)mapping.get(cursor1.key);
                     }
                     builder.field(cursor1.key);
                     builder.map(mapping);
                 }
                 builder.endObject();
-
 
                 builder.endObject();
             }
@@ -474,10 +488,10 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
                 builder.startObject("mappings");
                 for (ObjectObjectCursor<String, MappingMetaData> cursor : indexMetaData.getMappings()) {
                     Map<String, Object> mapping = XContentHelper
-                            .convertToMap(new BytesArray(cursor.value.source().uncompressed()), false).v2();
+                        .convertToMap(new BytesArray(cursor.value.source().uncompressed()), false).v2();
                     if (mapping.size() == 1 && mapping.containsKey(cursor.key)) {
                         // the type name is the root value, reduce it
-                        mapping = (Map<String, Object>) mapping.get(cursor.key);
+                        mapping = (Map<String, Object>)mapping.get(cursor.key);
                     }
                     builder.field(cursor.key);
                     builder.map(mapping);
@@ -593,7 +607,6 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
         private final ImmutableOpenMap.Builder<String, Custom> customs;
         private boolean fromDiff;
 
-
         public Builder(ClusterState state) {
             this.clusterName = state.clusterName;
             this.version = state.version();
@@ -687,7 +700,8 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
             if (UNKNOWN_UUID.equals(uuid)) {
                 uuid = UUIDs.randomBase64UUID();
             }
-            return new ClusterState(clusterName, version, uuid, metaData, routingTable, nodes, blocks, customs.build(), fromDiff);
+            return new ClusterState(clusterName, version, uuid, metaData, routingTable, nodes, blocks, customs.build(),
+                fromDiff);
         }
 
         public static byte[] toBytes(ClusterState state) throws IOException {
@@ -700,7 +714,8 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
          * @param data      input bytes
          * @param localNode used to set the local node in the cluster state.
          */
-        public static ClusterState fromBytes(byte[] data, DiscoveryNode localNode, NamedWriteableRegistry registry) throws IOException {
+        public static ClusterState fromBytes(byte[] data, DiscoveryNode localNode, NamedWriteableRegistry registry)
+            throws IOException {
             StreamInput in = new NamedWriteableAwareStreamInput(StreamInput.wrap(data), registry);
             return readFrom(in, localNode);
 
@@ -786,7 +801,8 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
             nodes = after.nodes.diff(before.nodes);
             metaData = after.metaData.diff(before.metaData);
             blocks = after.blocks.diff(before.blocks);
-            customs = DiffableUtils.diff(before.customs, after.customs, DiffableUtils.getStringKeySerializer(), CUSTOM_VALUE_SERIALIZER);
+            customs = DiffableUtils.diff(before.customs, after.customs, DiffableUtils.getStringKeySerializer(),
+                CUSTOM_VALUE_SERIALIZER);
         }
 
         ClusterStateDiff(StreamInput in, DiscoveryNode localNode) throws IOException {
@@ -798,7 +814,8 @@ public class ClusterState implements ToXContentFragment, Diffable<ClusterState> 
             nodes = DiscoveryNodes.readDiffFrom(in, localNode);
             metaData = MetaData.readDiffFrom(in);
             blocks = ClusterBlocks.readDiffFrom(in);
-            customs = DiffableUtils.readImmutableOpenMapDiff(in, DiffableUtils.getStringKeySerializer(), CUSTOM_VALUE_SERIALIZER);
+            customs = DiffableUtils.readImmutableOpenMapDiff(in, DiffableUtils.getStringKeySerializer(),
+                CUSTOM_VALUE_SERIALIZER);
         }
 
         @Override

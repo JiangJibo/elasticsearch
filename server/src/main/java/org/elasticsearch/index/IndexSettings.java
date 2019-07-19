@@ -32,6 +32,7 @@ import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.index.mapper.AllFieldMapper;
 import org.elasticsearch.index.translog.Translog;
+import org.elasticsearch.index.translog.Translog.Durability;
 import org.elasticsearch.node.Node;
 
 import java.util.Collections;
@@ -72,9 +73,17 @@ public final class IndexSettings {
         Setting.boolSetting("indices.query.query_string.allowLeadingWildcard", true, Property.NodeScope);
     public static final Setting<Boolean> ALLOW_UNMAPPED =
         Setting.boolSetting("index.query.parse.allow_unmapped_fields", true, Property.IndexScope);
+    /**
+     * 如果设置了translog是 async, 那么默认每5秒执行一次sync
+     */
     public static final Setting<TimeValue> INDEX_TRANSLOG_SYNC_INTERVAL_SETTING =
         Setting.timeSetting("index.translog.sync_interval", TimeValue.timeValueSeconds(5), TimeValue.timeValueMillis(100),
             Property.IndexScope);
+    /**
+     * translog配置, 默认每次请求
+     * translogs are synced for each high level request (bulk, index, delete)
+     * 也可以设置 {@link Durability#ASYNC} : 时间间隔
+     */
     public static final Setting<Translog.Durability> INDEX_TRANSLOG_DURABILITY_SETTING =
         new Setting<>("index.translog.durability", Translog.Durability.REQUEST.name(),
             (value) -> Translog.Durability.valueOf(value.toUpperCase(Locale.ROOT)), Property.Dynamic, Property.IndexScope);

@@ -83,9 +83,12 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
     /**
      * Creates a new {@link DiscoveryNode}
      * <p>
-     * <b>Note:</b> if the version of the node is unknown {@link Version#minimumCompatibilityVersion()} should be used for the current
-     * version. it corresponds to the minimum version this elasticsearch version can communicate with. If a higher version is used
-     * the node might not be able to communicate with the remove node. After initial handshakes node versions will be discovered
+     * <b>Note:</b> if the version of the node is unknown {@link Version#minimumCompatibilityVersion()} should be used
+     * for the current
+     * version. it corresponds to the minimum version this elasticsearch version can communicate with. If a higher
+     * version is used
+     * the node might not be able to communicate with the remove node. After initial handshakes node versions will be
+     * discovered
      * and updated.
      * </p>
      *
@@ -100,29 +103,36 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
     /**
      * Creates a new {@link DiscoveryNode}
      * <p>
-     * <b>Note:</b> if the version of the node is unknown {@link Version#minimumCompatibilityVersion()} should be used for the current
-     * version. it corresponds to the minimum version this elasticsearch version can communicate with. If a higher version is used
-     * the node might not be able to communicate with the remove node. After initial handshakes node versions will be discovered
+     * <b>Note:</b> if the version of the node is unknown {@link Version#minimumCompatibilityVersion()} should be used
+     * for the current
+     * version. it corresponds to the minimum version this elasticsearch version can communicate with. If a higher
+     * version is used
+     * the node might not be able to communicate with the remove node. After initial handshakes node versions will be
+     * discovered
      * and updated.
      * </p>
      *
-     * @param id         the nodes unique (persistent) node id. This constructor will auto generate a random ephemeral id.
+     * @param id         the nodes unique (persistent) node id. This constructor will auto generate a random ephemeral
+     *                   id.
      * @param address    the nodes transport address
      * @param attributes node attributes
      * @param roles      node roles
      * @param version    the version of the node
      */
     public DiscoveryNode(String id, TransportAddress address, Map<String, String> attributes, Set<Role> roles,
-                         Version version) {
+        Version version) {
         this("", id, address, attributes, roles, version);
     }
 
     /**
      * Creates a new {@link DiscoveryNode}
      * <p>
-     * <b>Note:</b> if the version of the node is unknown {@link Version#minimumCompatibilityVersion()} should be used for the current
-     * version. it corresponds to the minimum version this elasticsearch version can communicate with. If a higher version is used
-     * the node might not be able to communicate with the remove node. After initial handshakes node versions will be discovered
+     * <b>Note:</b> if the version of the node is unknown {@link Version#minimumCompatibilityVersion()} should be used
+     * for the current
+     * version. it corresponds to the minimum version this elasticsearch version can communicate with. If a higher
+     * version is used
+     * the node might not be able to communicate with the remove node. After initial handshakes node versions will be
+     * discovered
      * and updated.
      * </p>
      *
@@ -134,17 +144,21 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
      * @param version    the version of the node
      */
     public DiscoveryNode(String nodeName, String nodeId, TransportAddress address,
-                         Map<String, String> attributes, Set<Role> roles, Version version) {
-        this(nodeName, nodeId, UUIDs.randomBase64UUID(), address.address().getHostString(), address.getAddress(), address, attributes,
+        Map<String, String> attributes, Set<Role> roles, Version version) {
+        this(nodeName, nodeId, UUIDs.randomBase64UUID(), address.address().getHostString(), address.getAddress(),
+            address, attributes,
             roles, version);
     }
 
     /**
      * Creates a new {@link DiscoveryNode}.
      * <p>
-     * <b>Note:</b> if the version of the node is unknown {@link Version#minimumCompatibilityVersion()} should be used for the current
-     * version. it corresponds to the minimum version this elasticsearch version can communicate with. If a higher version is used
-     * the node might not be able to communicate with the remove node. After initial handshakes node versions will be discovered
+     * <b>Note:</b> if the version of the node is unknown {@link Version#minimumCompatibilityVersion()} should be used
+     * for the current
+     * version. it corresponds to the minimum version this elasticsearch version can communicate with. If a higher
+     * version is used
+     * the node might not be able to communicate with the remove node. After initial handshakes node versions will be
+     * discovered
      * and updated.
      * </p>
      *
@@ -158,7 +172,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
      * @param version     the version of the node
      */
     public DiscoveryNode(String nodeName, String nodeId, String ephemeralId, String hostName, String hostAddress,
-                         TransportAddress address, Map<String, String> attributes, Set<Role> roles, Version version) {
+        TransportAddress address, Map<String, String> attributes, Set<Role> roles, Version version) {
         if (nodeName != null) {
             this.nodeName = nodeName.intern();
         } else {
@@ -194,7 +208,8 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
     public static DiscoveryNode createLocal(Settings settings, TransportAddress publishAddress, String nodeId) {
         Map<String, String> attributes = Node.NODE_ATTRIBUTES.getAsMap(settings);
         Set<Role> roles = getRolesFromSettings(settings);
-        return new DiscoveryNode(Node.NODE_NAME_SETTING.get(settings), nodeId, publishAddress, attributes, roles, Version.CURRENT);
+        return new DiscoveryNode(Node.NODE_NAME_SETTING.get(settings), nodeId, publishAddress, attributes, roles,
+            Version.CURRENT);
     }
 
     /**
@@ -229,8 +244,10 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
         if (in.getVersion().after(Version.V_5_0_2)) {
             this.address = new TransportAddress(in);
         } else {
-            // we need to do this to preserve the host information during pinging and joining of a master. Since the version of the
-            // DiscoveryNode is set to Version#minimumCompatibilityVersion(), the host information gets lost as we do not serialize the
+            // we need to do this to preserve the host information during pinging and joining of a master. Since the
+            // version of the
+            // DiscoveryNode is set to Version#minimumCompatibilityVersion(), the host information gets lost as we do
+            // not serialize the
             // hostString for the address
             this.address = new TransportAddress(in, hostName);
         }
@@ -283,8 +300,10 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
 
     /**
      * The unique ephemeral id of the node. Ephemeral ids are meant to be attached the life span
-     * of a node process. When ever a node is restarted, it's ephemeral id is required to change (while it's {@link #getId()}
-     * will be read from the data folder and will remain the same across restarts). Since all node attributes and addresses
+     * of a node process. When ever a node is restarted, it's ephemeral id is required to change (while it's {@link
+     * #getId()}
+     * will be read from the data folder and will remain the same across restarts). Since all node attributes and
+     * addresses
      * are maintained during the life span of a node process, we can (and are) using the ephemeralId in
      * {@link DiscoveryNode#equals(Object)}.
      */
@@ -330,7 +349,8 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
 
     /**
      * Returns a set of all the roles that the node fulfills.
-     * If the node doesn't have any specific role, the set is returned empty, which means that the node is a coordinating only node.
+     * If the node doesn't have any specific role, the set is returned empty, which means that the node is a
+     * coordinating only node.
      */
     public Set<Role> getRoles() {
         return roles;
@@ -404,6 +424,7 @@ public class DiscoveryNode implements Writeable, ToXContentFragment {
     }
 
     /**
+     * 节点角色
      * Enum that holds all the possible roles that that a node can fulfill in a cluster.
      * Each role has its name and a corresponding abbreviation used by cat apis.
      */

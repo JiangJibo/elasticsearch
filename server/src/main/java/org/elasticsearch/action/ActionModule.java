@@ -347,10 +347,16 @@ public class ActionModule extends AbstractModule {
     private final ClusterSettings clusterSettings;
     private final SettingsFilter settingsFilter;
     private final List<ActionPlugin> actionPlugins;
+    /**
+     * 所有的action和其rest url的映射
+     */
     private final Map<String, ActionHandler<?, ?>> actions;
     private final ActionFilters actionFilters;
     private final AutoCreateIndex autoCreateIndex;
     private final DestructiveOperations destructiveOperations;
+    /**
+     * 所有action的入口
+     */
     private final RestController restController;
 
     public ActionModule(boolean transportClient, Settings settings, IndexNameExpressionResolver indexNameExpressionResolver,
