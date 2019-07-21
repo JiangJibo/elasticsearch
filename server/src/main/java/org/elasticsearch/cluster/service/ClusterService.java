@@ -103,7 +103,7 @@ public class ClusterService extends AbstractLifecycleComponent {
 
     @Override
     protected synchronized void doStart() {
-        // 启动集群应用者服务
+        // 启动集群应用者服务,主要是初始化线程池
         clusterApplierService.start();
         // 启动Master服务
         masterService.start();

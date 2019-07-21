@@ -96,11 +96,11 @@ public class PublishClusterStateAction extends AbstractComponent {
     private final AtomicLong compatibleClusterStateDiffReceivedCount = new AtomicLong();
 
     public PublishClusterStateAction(
-            Settings settings,
-            TransportService transportService,
-            NamedWriteableRegistry namedWriteableRegistry,
-            IncomingClusterStateListener incomingClusterStateListener,
-            DiscoverySettings discoverySettings) {
+        Settings settings,
+        TransportService transportService,
+        NamedWriteableRegistry namedWriteableRegistry,
+        IncomingClusterStateListener incomingClusterStateListener,
+        DiscoverySettings discoverySettings) {
         super(settings);
         this.transportService = transportService;
         this.namedWriteableRegistry = namedWriteableRegistry;
@@ -113,6 +113,8 @@ public class PublishClusterStateAction extends AbstractComponent {
     }
 
     /**
+     * 将集群状态变更事件通知所有的其他Node, 如果至少 {@link ElectMasterService#DISCOVERY_ZEN_MINIMUM_MASTER_NODES_SETTING} 个Node ACK
+     * 则当前状态变更会被Commit, 同时应用到Master和其他的所有Node
      * publishes a cluster change event to other nodes. if at least minMasterNodes acknowledge the change it is committed and will
      * be processed by the master and the other nodes.
      * <p>
@@ -120,7 +122,8 @@ public class PublishClusterStateAction extends AbstractComponent {
      * if the change is not committed and should be rejected.
      * Any other exception signals the something wrong happened but the change is committed.
      */
-    public void publish(final ClusterChangedEvent clusterChangedEvent, final int minMasterNodes,
+    public void publish(final ClusterChangedEvent clusterChangedEvent,
+                        final int minMasterNodes,
                         final Discovery.AckListener ackListener) throws Discovery.FailedToCommitClusterStateException {
         final DiscoveryNodes nodes;
         final SendingController sendingController;
@@ -133,11 +136,13 @@ public class PublishClusterStateAction extends AbstractComponent {
             nodesToPublishTo = new HashSet<>(nodes.getSize());
             DiscoveryNode localNode = nodes.getLocalNode();
             final int totalMasterNodes = nodes.getMasterNodes().size();
+            // 有哪些Node需要发送状态信息
             for (final DiscoveryNode node : nodes) {
                 if (node.equals(localNode) == false) {
                     nodesToPublishTo.add(node);
                 }
             }
+            // 是否发送全额状态， 如果存在生个状态，且支持发送状态差异
             sendFullVersion = !discoverySettings.getPublishDiff() || clusterChangedEvent.previousState() == null;
             serializedStates = new HashMap<>();
             serializedDiffs = new HashMap<>();
@@ -147,7 +152,7 @@ public class PublishClusterStateAction extends AbstractComponent {
             // will cause a full serialization based on an older version, which may fail after the
             // change has been committed.
             buildDiffAndSerializeStates(clusterChangedEvent.state(), clusterChangedEvent.previousState(),
-                    nodesToPublishTo, sendFullVersion, serializedStates, serializedDiffs);
+                nodesToPublishTo, sendFullVersion, serializedStates, serializedDiffs);
 
             final BlockingClusterStatePublishResponseHandler publishResponseHandler =
                 new AckClusterStatePublishResponseHandler(nodesToPublishTo, ackListener);
@@ -172,6 +177,16 @@ public class PublishClusterStateAction extends AbstractComponent {
         }
     }
 
+    /**
+     * 执行集群状态发送
+     *
+     * @param clusterChangedEvent
+     * @param nodesToPublishTo
+     * @param sendingController
+     * @param sendFullVersion
+     * @param serializedStates
+     * @param serializedDiffs
+     */
     private void innerPublish(final ClusterChangedEvent clusterChangedEvent, final Set<DiscoveryNode> nodesToPublishTo,
                               final SendingController sendingController, final boolean sendFullVersion,
                               final Map<Version, BytesReference> serializedStates, final Map<Version, BytesReference> serializedDiffs) {
@@ -181,7 +196,7 @@ public class PublishClusterStateAction extends AbstractComponent {
         final TimeValue publishTimeout = discoverySettings.getPublishTimeout();
 
         final long publishingStartInNanos = System.nanoTime();
-
+        // 给每个节点发送状态
         for (final DiscoveryNode node : nodesToPublishTo) {
             // try and serialize the cluster state once (or per version), so we don't serialize it
             // per node when we send it over the wire, compress it while we are at it...
@@ -192,13 +207,14 @@ public class PublishClusterStateAction extends AbstractComponent {
                 sendClusterStateDiff(clusterState, serializedDiffs, serializedStates, node, publishTimeout, sendingController);
             }
         }
-
+        // 等待发送了集群状态的节点的ACK
         sendingController.waitForCommit(discoverySettings.getCommitTimeout());
 
         try {
             long timeLeftInNanos = Math.max(0, publishTimeout.nanos() - (System.nanoTime() - publishingStartInNanos));
             final BlockingClusterStatePublishResponseHandler publishResponseHandler = sendingController.getPublishResponseHandler();
             sendingController.setPublishingTimedOut(!publishResponseHandler.awaitAllNodes(TimeValue.timeValueNanos(timeLeftInNanos)));
+            // 打印那些超时了还没有ACK的节点信息
             if (sendingController.getPublishingTimedOut()) {
                 DiscoveryNode[] pendingNodes = publishResponseHandler.pendingNodes();
                 // everyone may have just responded
@@ -219,6 +235,16 @@ public class PublishClusterStateAction extends AbstractComponent {
         }
     }
 
+    /**
+     * 构建集群状态的差异性, 同时序列化
+     *
+     * @param clusterState
+     * @param previousState
+     * @param nodesToPublishTo
+     * @param sendFullVersion
+     * @param serializedStates
+     * @param serializedDiffs
+     */
     private void buildDiffAndSerializeStates(ClusterState clusterState, ClusterState previousState, Set<DiscoveryNode> nodesToPublishTo,
                                              boolean sendFullVersion, Map<Version, BytesReference> serializedStates,
                                              Map<Version, BytesReference> serializedDiffs) {
@@ -282,30 +308,30 @@ public class PublishClusterStateAction extends AbstractComponent {
             TransportRequestOptions options = TransportRequestOptions.builder()
                 .withType(TransportRequestOptions.Type.STATE).withCompress(false).build();
             transportService.sendRequest(node, SEND_ACTION_NAME,
-                    new BytesTransportRequest(bytes, node.getVersion()),
-                    options,
-                    new EmptyTransportResponseHandler(ThreadPool.Names.SAME) {
+                new BytesTransportRequest(bytes, node.getVersion()),
+                options,
+                new EmptyTransportResponseHandler(ThreadPool.Names.SAME) {
 
-                        @Override
-                        public void handleResponse(TransportResponse.Empty response) {
-                            if (sendingController.getPublishingTimedOut()) {
-                                logger.debug("node {} responded for cluster state [{}] (took longer than [{}])", node,
-                                    clusterState.version(), publishTimeout);
-                            }
-                            sendingController.onNodeSendAck(node);
+                    @Override
+                    public void handleResponse(TransportResponse.Empty response) {
+                        if (sendingController.getPublishingTimedOut()) {
+                            logger.debug("node {} responded for cluster state [{}] (took longer than [{}])", node,
+                                clusterState.version(), publishTimeout);
                         }
+                        sendingController.onNodeSendAck(node);
+                    }
 
-                        @Override
-                        public void handleException(TransportException exp) {
-                            if (sendDiffs && exp.unwrapCause() instanceof IncompatibleClusterStateVersionException) {
-                                logger.debug("resending full cluster state to node {} reason {}", node, exp.getDetailedMessage());
-                                sendFullClusterState(clusterState, serializedStates, node, publishTimeout, sendingController);
-                            } else {
-                                logger.debug(() -> new ParameterizedMessage("failed to send cluster state to {}", node), exp);
-                                sendingController.onNodeSendFailed(node, exp);
-                            }
+                    @Override
+                    public void handleException(TransportException exp) {
+                        if (sendDiffs && exp.unwrapCause() instanceof IncompatibleClusterStateVersionException) {
+                            logger.debug("resending full cluster state to node {} reason {}", node, exp.getDetailedMessage());
+                            sendFullClusterState(clusterState, serializedStates, node, publishTimeout, sendingController);
+                        } else {
+                            logger.debug(() -> new ParameterizedMessage("failed to send cluster state to {}", node), exp);
+                            sendingController.onNodeSendFailed(node, exp);
                         }
-                    });
+                    }
+                });
         } catch (Exception e) {
             logger.warn(() -> new ParameterizedMessage("error sending cluster state to {}", node), e);
             sendingController.onNodeSendFailed(node, e);
@@ -320,32 +346,31 @@ public class PublishClusterStateAction extends AbstractComponent {
             // no need to put a timeout on the options here, because we want the response to eventually be received
             // and not log an error if it arrives after the timeout
             transportService.sendRequest(node, COMMIT_ACTION_NAME,
-                    new CommitClusterStateRequest(clusterState.stateUUID()),
-                    options,
-                    new EmptyTransportResponseHandler(ThreadPool.Names.SAME) {
+                new CommitClusterStateRequest(clusterState.stateUUID()),
+                options,
+                new EmptyTransportResponseHandler(ThreadPool.Names.SAME) {
 
-                        @Override
-                        public void handleResponse(TransportResponse.Empty response) {
-                            if (sendingController.getPublishingTimedOut()) {
-                                logger.debug("node {} responded to cluster state commit [{}]", node, clusterState.version());
-                            }
-                            sendingController.getPublishResponseHandler().onResponse(node);
+                    @Override
+                    public void handleResponse(TransportResponse.Empty response) {
+                        if (sendingController.getPublishingTimedOut()) {
+                            logger.debug("node {} responded to cluster state commit [{}]", node, clusterState.version());
                         }
+                        sendingController.getPublishResponseHandler().onResponse(node);
+                    }
 
-                        @Override
-                        public void handleException(TransportException exp) {
-                            logger.debug(() -> new ParameterizedMessage("failed to commit cluster state (uuid [{}], version [{}]) to {}",
-                                    clusterState.stateUUID(), clusterState.version(), node), exp);
-                            sendingController.getPublishResponseHandler().onFailure(node, exp);
-                        }
-                    });
+                    @Override
+                    public void handleException(TransportException exp) {
+                        logger.debug(() -> new ParameterizedMessage("failed to commit cluster state (uuid [{}], version [{}]) to {}",
+                            clusterState.stateUUID(), clusterState.version(), node), exp);
+                        sendingController.getPublishResponseHandler().onFailure(node, exp);
+                    }
+                });
         } catch (Exception t) {
             logger.warn(() -> new ParameterizedMessage("error sending cluster state commit (uuid [{}], version [{}]) to {}",
-                    clusterState.stateUUID(), clusterState.version(), node), t);
+                clusterState.stateUUID(), clusterState.version(), node), t);
             sendingController.getPublishResponseHandler().onFailure(node, t);
         }
     }
-
 
     public static BytesReference serializeFullClusterState(ClusterState clusterState, Version nodeVersion) throws IOException {
         BytesStreamOutput bStream = new BytesStreamOutput();
@@ -447,6 +472,7 @@ public class PublishClusterStateAction extends AbstractComponent {
     }
 
     private class CommitClusterStateRequestHandler implements TransportRequestHandler<CommitClusterStateRequest> {
+
         @Override
         public void messageReceived(CommitClusterStateRequest request, final TransportChannel channel) throws Exception {
             handleCommitRequest(request, channel);
@@ -477,7 +503,6 @@ public class PublishClusterStateAction extends AbstractComponent {
         }
     }
 
-
     /**
      * Coordinates acknowledgments of the sent cluster state from the different nodes. Commits the change
      * after `minimum_master_nodes` have successfully responded or fails the entire change. After committing
@@ -497,6 +522,9 @@ public class PublishClusterStateAction extends AbstractComponent {
 
         // writes and reads of these are protected under synchronization
         final CountDownLatch committedOrFailedLatch; // 0 count indicates that a decision was made w.r.t committing or failing
+        /**
+         * 集群状态是否Commit成功
+         */
         boolean committed;  // true if cluster state was committed
         int neededMastersToCommit; // number of master nodes acks still needed before committing
         int pendingMasterNodes; // how many master node still need to respond
@@ -518,6 +546,11 @@ public class PublishClusterStateAction extends AbstractComponent {
             this.committedOrFailedLatch = new CountDownLatch(committed ? 0 : 1);
         }
 
+        /**
+         * 等待其他的非Master的Node的Commit
+         *
+         * @param commitTimeout
+         */
         public void waitForCommit(TimeValue commitTimeout) {
             boolean timedout = false;
             try {
@@ -525,13 +558,13 @@ public class PublishClusterStateAction extends AbstractComponent {
             } catch (InterruptedException e) {
                 // the commit check bellow will either translate to an exception or we are committed and we can safely continue
             }
-
+            // 超时就是失败
             if (timedout) {
                 markAsFailed("timed out waiting for commit (commit timeout [" + commitTimeout + "])");
             }
             if (isCommitted() == false) {
                 throw new Discovery.FailedToCommitClusterStateException("{} enough masters to ack sent cluster state. [{}] left",
-                        timedout ? "timed out while waiting for" : "failed to get", neededMastersToCommit);
+                    timedout ? "timed out while waiting for" : "failed to get", neededMastersToCommit);
             }
         }
 
@@ -564,7 +597,7 @@ public class PublishClusterStateAction extends AbstractComponent {
          */
         private synchronized void checkForCommitOrFailIfNoPending(DiscoveryNode masterNode) {
             logger.trace("master node {} acked cluster state version [{}]. processing ... (current pending [{}], needed [{}])",
-                    masterNode, clusterState.version(), pendingMasterNodes, neededMastersToCommit);
+                masterNode, clusterState.version(), pendingMasterNodes, neededMastersToCommit);
             neededMastersToCommit--;
             if (neededMastersToCommit == 0) {
                 if (markAsCommitted()) {
@@ -588,7 +621,7 @@ public class PublishClusterStateAction extends AbstractComponent {
             if (node.isMasterNode()) {
                 logger.trace("master node {} failed to ack cluster state version [{}]. " +
                         "processing ... (current pending [{}], needed [{}])",
-                        node, clusterState.version(), pendingMasterNodes, neededMastersToCommit);
+                    node, clusterState.version(), pendingMasterNodes, neededMastersToCommit);
                 decrementPendingMasterAcksAndChangeForFailure();
             }
             publishResponseHandler.onFailure(node, e);

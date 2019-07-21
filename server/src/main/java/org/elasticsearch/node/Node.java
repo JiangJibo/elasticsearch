@@ -688,6 +688,7 @@ public class Node implements Closeable {
         injector.getInstance(GatewayService.class).start();
         // ZenDiscovery , 节点发现,当前节点状态广播 和 master选举的服务
         Discovery discovery = injector.getInstance(Discovery.class);
+        // 设置集群状态发布器
         clusterService.getMasterService().setClusterStatePublisher(discovery::publish);
 
         // Start the transport service now so the publish address will be added to the local disco node in ClusterService
@@ -720,11 +721,14 @@ public class Node implements Closeable {
 
         clusterService.addStateApplier(transportService.getTaskManager());
         // start after transport service so the local disco is known
+        // 初始化当前节点的集群状态， 在集群服务前启动，这样ClusterApplierService 能够设置初始化集群状态
         discovery.start(); // start before cluster service so that it can set initial state on ClusterApplierService
+        // 启动集群服务
         clusterService.start();
         assert clusterService.localNode().equals(localNodeFactory.getNode())
             : "clusterService has a different local node than the factory provided";
         transportService.acceptIncomingRequests();
+        // 当前节点加入集群,选举或者获取master
         discovery.startInitialJoin();
         // tribe nodes don't have a master so we shouldn't register an observers
         final TimeValue initialStateTimeout = DiscoverySettings.INITIAL_STATE_TIMEOUT_SETTING.get(settings);

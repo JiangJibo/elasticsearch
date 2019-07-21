@@ -264,6 +264,7 @@ public class ZenDiscovery extends AbstractLifecycleComponent
 
     @Override
     protected void doStart() {
+        // 当前节点
         DiscoveryNode localNode = transportService.getLocalNode();
         assert localNode != null;
         synchronized (stateMutex) {
@@ -271,6 +272,7 @@ public class ZenDiscovery extends AbstractLifecycleComponent
             assert committedState.get() == null;
             assert localNode != null;
             ClusterState.Builder builder = clusterApplier.newClusterStateBuilder();
+            // 初始化集群状态, 随机生成uuid
             ClusterState initialState = builder
                 .blocks(ClusterBlocks.builder()
                     .addGlobalBlock(STATE_NOT_RECOVERED_BLOCK)
@@ -278,6 +280,7 @@ public class ZenDiscovery extends AbstractLifecycleComponent
                 .nodes(DiscoveryNodes.builder().add(localNode).localNodeId(localNode.getId()))
                 .build();
             committedState.set(initialState);
+            // 设置集群服务的初始化状态
             clusterApplier.setInitialState(initialState);
             nodesFD.setLocalNode(localNode);
             joinThreadControl.start();
@@ -347,7 +350,7 @@ public class ZenDiscovery extends AbstractLifecycleComponent
     }
 
     /**
-     * 发布所有变更信息给master
+     * 发布所有变更信息给节点
      *
      * @param clusterChangedEvent
      * @param ackListener
@@ -366,6 +369,7 @@ public class ZenDiscovery extends AbstractLifecycleComponent
         pendingStatesQueue.addPending(newState);
 
         try {
+            //  向所有参与了集群选举的节点发布集群状态
             publishClusterState.publish(clusterChangedEvent, electMaster.minimumMasterNodes(), ackListener);
         } catch (FailedToCommitClusterStateException t) {
             // cluster service logs a WARN message
