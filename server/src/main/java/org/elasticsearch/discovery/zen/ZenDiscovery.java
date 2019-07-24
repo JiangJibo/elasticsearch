@@ -478,7 +478,8 @@ public class ZenDiscovery extends AbstractLifecycleComponent
         final Thread currentThread = Thread.currentThread();
         nodeJoinController.startElectionContext();
         while (masterNode == null && joinThreadControl.joinThreadActive(currentThread)) {
-            // 找到Master
+            // 找到Master, 可能为空，比如集群刚启动,节点数未满足选举的最小数
+            // 如果集群只有一个Node, 那么将自身作为Master
             masterNode = findMaster();
         }
 
@@ -996,7 +997,7 @@ public class ZenDiscovery extends AbstractLifecycleComponent
         assert fullPingResponses.stream().map(ZenPing.PingResponse::node)
             .filter(n -> n.equals(localNode)).findAny().isPresent() == false;
 
-        // 把本地节点加入, 方便排序
+        // 把本地节点加入, 一般Node有Maste，Data, Injest 三种角色
         fullPingResponses.add(new ZenPing.PingResponse(localNode, null, this.clusterState()));
 
         // filter responses
@@ -1016,7 +1017,7 @@ public class ZenDiscovery extends AbstractLifecycleComponent
         // nodes discovered during pinging
         List<ElectMasterService.MasterCandidate> masterCandidates = new ArrayList<>();
         for (ZenPing.PingResponse pingResponse : pingResponses) {
-            // 如果某个节点被指定了master角色
+            // 如果某个节点被指定了master角色,当前节点也是Master角色之一
             if (pingResponse.node().isMasterNode()) {
                 masterCandidates.add(
                     new ElectMasterService.MasterCandidate(pingResponse.node(), pingResponse.getClusterStateVersion()));
@@ -1024,9 +1025,10 @@ public class ZenDiscovery extends AbstractLifecycleComponent
         }
         // 如果生效的master不存在, 也就是集群刚启动, 还在选举master
         if (activeMasters.isEmpty()) {
-            // 是否有足够的master角色来选举新的master, 就是master角色节点数 >= DISCOVERY_ZEN_MINIMUM_MASTER_NODES_SETTING
+            // 是否有足够的master角色来选举新的master, 就是master角色节点数 >= DISCOVERY_ZEN_MINIMUM_MASTER_NODES_SETTING, 默认值-1
             if (electMaster.hasEnoughCandidates(masterCandidates)) {
                 //  将所有节点按集群状态由低到高排序, 取状态版本最低的节点作为master
+                // 如果集群只有一个Node, 那么启动时就将自身作为Master
                 final ElectMasterService.MasterCandidate winner = electMaster.electMaster(masterCandidates);
                 logger.trace("candidate {} won election", winner);
                 return winner.getNode();
