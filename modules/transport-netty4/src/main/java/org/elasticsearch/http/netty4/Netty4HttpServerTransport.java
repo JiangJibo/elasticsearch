@@ -288,11 +288,11 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
             this.serverOpenChannels = new Netty4OpenChannelsHandler(logger);
 
             serverBootstrap = new ServerBootstrap();
-
+            // workerCount: 默认2*物理线池数, 父子共用一个线程池组
             serverBootstrap.group(new NioEventLoopGroup(workerCount, daemonThreadFactory(settings,
                 HTTP_SERVER_WORKER_THREAD_NAME_PREFIX)));
             serverBootstrap.channel(NioServerSocketChannel.class);
-            // 设置worker的handler
+            // 设置worker的handler, 设置各种Handler
             serverBootstrap.childHandler(configureServerChannelHandler());
 
             serverBootstrap.childOption(ChannelOption.TCP_NODELAY, SETTING_HTTP_TCP_NO_DELAY.get(settings));
@@ -310,11 +310,11 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
 
             serverBootstrap.option(ChannelOption.RCVBUF_ALLOCATOR, recvByteBufAllocator);
             serverBootstrap.childOption(ChannelOption.RCVBUF_ALLOCATOR, recvByteBufAllocator);
-
+            // windows不复用, 否则复用端口
             final boolean reuseAddress = SETTING_HTTP_TCP_REUSE_ADDRESS.get(settings);
             serverBootstrap.option(ChannelOption.SO_REUSEADDR, reuseAddress);
             serverBootstrap.childOption(ChannelOption.SO_REUSEADDR, reuseAddress);
-
+            // 127.0.0.1:9200  [::1]:9200
             this.boundAddress = createBoundHttpAddress();
             if (logger.isInfoEnabled()) {
                 logger.info("{}", boundAddress);
@@ -331,12 +331,14 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
         // Bind and start to accept incoming connections.
         InetAddress hostAddresses[];
         try {
+            // /127.0.0.1  /0:0:0:0:0:0:0:1
             hostAddresses = networkService.resolveBindHostAddresses(bindHosts);
         } catch (IOException e) {
             throw new BindHttpException("Failed to resolve host [" + Arrays.toString(bindHosts) + "]", e);
         }
 
         List<TransportAddress> boundAddresses = new ArrayList<>(hostAddresses.length);
+        // 添加 /127.0.0.1：9200  /0:0:0:0:0:0:0:1：9200
         for (InetAddress address : hostAddresses) {
             boundAddresses.add(bindAddress(address));
         }
@@ -582,6 +584,12 @@ public class Netty4HttpServerTransport extends AbstractLifecycleComponent implem
             this.requestHandler = new Netty4HttpRequestHandler(transport, detailedErrorsEnabled, threadContext);
         }
 
+        /**
+         * 设置Channel的各种处理器
+         *
+         * @param ch
+         * @throws Exception
+         */
         @Override
         protected void initChannel(Channel ch) throws Exception {
             ch.pipeline().addLast("openChannels", transport.serverOpenChannels);

@@ -35,6 +35,9 @@ import org.elasticsearch.transport.netty4.Netty4Utils;
 
 import java.util.Collections;
 
+/**
+ * 共享的针对Http请求的Handler
+ */
 @ChannelHandler.Sharable
 class Netty4HttpRequestHandler extends SimpleChannelInboundHandler<Object> {
 
