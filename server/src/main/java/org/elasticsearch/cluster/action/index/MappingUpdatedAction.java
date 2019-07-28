@@ -36,6 +36,7 @@ import org.elasticsearch.index.mapper.MapperService;
 import org.elasticsearch.index.mapper.Mapping;
 
 /**
+ * 映射更新Action
  * Called by shards in the cluster when their mapping was dynamically updated and it needs to be updated
  * in the cluster state meta data (and broadcast to all members).
  */
@@ -45,6 +46,9 @@ public class MappingUpdatedAction extends AbstractComponent {
         Setting.positiveTimeSetting("indices.mapping.dynamic_timeout", TimeValue.timeValueSeconds(30),
             Property.Dynamic, Property.NodeScope);
 
+    /**
+     * 索引客户端
+     */
     private IndicesAdminClient client;
     private volatile TimeValue dynamicMappingUpdateTimeout;
 
@@ -59,7 +63,6 @@ public class MappingUpdatedAction extends AbstractComponent {
         this.dynamicMappingUpdateTimeout = dynamicMappingUpdateTimeout;
     }
 
-
     public void setClient(Client client) {
         this.client = client.admin().indices();
     }
@@ -69,10 +72,11 @@ public class MappingUpdatedAction extends AbstractComponent {
             throw new IllegalArgumentException("_default_ mapping should not be updated");
         }
         return client.preparePutMapping().setConcreteIndex(index).setType(type).setSource(mappingUpdate.toString(), XContentType.JSON)
-                .setMasterNodeTimeout(timeout).setTimeout(timeout);
+            .setMasterNodeTimeout(timeout).setTimeout(timeout);
     }
 
     /**
+     * 在Master上更新索引Mapping
      * Same as {@link #updateMappingOnMaster(Index, String, Mapping, TimeValue)}
      * using the default timeout.
      */

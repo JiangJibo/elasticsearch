@@ -169,7 +169,7 @@ public class MetaDataCreateIndexService extends AbstractComponent {
         }
         if (index.contains(":")) {
             deprecationLogger.deprecated("index or alias name [" + index +
-                            "] containing ':' is deprecated and will not be supported in Elasticsearch 7.0+");
+                "] containing ':' is deprecated and will not be supported in Elasticsearch 7.0+");
         }
         if (index.charAt(0) == '_' || index.charAt(0) == '-' || index.charAt(0) == '+') {
             throw exceptionCtor.apply(index, "must not start with '_', '-', or '+'");
@@ -200,18 +200,18 @@ public class MetaDataCreateIndexService extends AbstractComponent {
      * the timeout, then {@link CreateIndexClusterStateUpdateResponse#isShardsAcknowledged()} will
      * return true, otherwise if the operation timed out, then it will return false.
      *
-     * @param request the index creation cluster state update request
+     * @param request  the index creation cluster state update request
      * @param listener the listener on which to send the index creation cluster state update response
      */
     public void createIndex(final CreateIndexClusterStateUpdateRequest request,
                             final ActionListener<CreateIndexClusterStateUpdateResponse> listener) {
         onlyCreateIndex(request, ActionListener.wrap(response -> {
             if (response.isAcknowledged()) {
-                activeShardsObserver.waitForActiveShards(new String[]{request.index()}, request.waitForActiveShards(), request.ackTimeout(),
+                activeShardsObserver.waitForActiveShards(new String[] {request.index()}, request.waitForActiveShards(), request.ackTimeout(),
                     shardsAcknowledged -> {
                         if (shardsAcknowledged == false) {
                             logger.debug("[{}] index created, but the operation timed out while waiting for " +
-                                             "enough shards to be started.", request.index());
+                                "enough shards to be started.", request.index());
                         }
                         listener.onResponse(new CreateIndexClusterStateUpdateResponse(response.isAcknowledged(), shardsAcknowledged));
                     }, listener::onFailure);
@@ -233,6 +233,7 @@ public class MetaDataCreateIndexService extends AbstractComponent {
     }
 
     interface IndexValidator {
+
         void validate(CreateIndexClusterStateUpdateRequest request, ClusterState state);
     }
 
@@ -267,6 +268,13 @@ public class MetaDataCreateIndexService extends AbstractComponent {
             return new ClusterStateUpdateResponse(acknowledged);
         }
 
+        /**
+         * 创建索引
+         *
+         * @param currentState
+         * @return
+         * @throws Exception
+         */
         @Override
         public ClusterState execute(ClusterState currentState) throws Exception {
             Index createdIndex = null;
@@ -582,7 +590,7 @@ public class MetaDataCreateIndexService extends AbstractComponent {
         if (Strings.isEmpty(customPath) == false && env.sharedDataFile() == null) {
             validationErrors.add("path.shared_data must be set in order to use custom data paths");
         } else if (Strings.isEmpty(customPath) == false) {
-            Path resolvedPath = PathUtils.get(new Path[]{env.sharedDataFile()}, customPath);
+            Path resolvedPath = PathUtils.get(new Path[] {env.sharedDataFile()}, customPath);
             if (resolvedPath == null) {
                 validationErrors.add("custom path [" + customPath + "] is not a sub-path of path.shared_data [" + env.sharedDataFile() + "]");
             }
@@ -592,11 +600,12 @@ public class MetaDataCreateIndexService extends AbstractComponent {
 
     /**
      * Validates the settings and mappings for shrinking an index.
+     *
      * @return the list of nodes at least one instance of the source index shards are allocated
      */
     static List<String> validateShrinkIndex(ClusterState state, String sourceIndex,
-                                        Set<String> targetIndexMappingsTypes, String targetIndexName,
-                                        Settings targetIndexSettings) {
+                                            Set<String> targetIndexMappingsTypes, String targetIndexName,
+                                            Settings targetIndexSettings) {
         IndexMetaData sourceMetaData = validateResize(state, sourceIndex, targetIndexMappingsTypes, targetIndexName, targetIndexSettings);
         assert IndexMetaData.INDEX_NUMBER_OF_SHARDS_SETTING.exists(targetIndexSettings);
         IndexMetaData.selectShrinkShards(0, sourceMetaData, IndexMetaData.INDEX_NUMBER_OF_SHARDS_SETTING.get(targetIndexSettings));
@@ -642,8 +651,8 @@ public class MetaDataCreateIndexService extends AbstractComponent {
     }
 
     static IndexMetaData validateResize(ClusterState state, String sourceIndex,
-                                           Set<String> targetIndexMappingsTypes, String targetIndexName,
-                                           Settings targetIndexSettings) {
+                                        Set<String> targetIndexMappingsTypes, String targetIndexName,
+                                        Settings targetIndexSettings) {
         if (state.metaData().hasIndex(targetIndexName)) {
             throw new ResourceAlreadyExistsException(state.metaData().index(targetIndexName).getIndex());
         }

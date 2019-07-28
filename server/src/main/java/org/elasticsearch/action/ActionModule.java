@@ -333,7 +333,7 @@ import java.util.stream.Stream;
 
 import static java.util.Collections.unmodifiableMap;
 
-/**
+/** Tcp/Ip  9300 端口的Action,不是Http Rest请求的
  * Builds and binds the generic action map, all {@link TransportAction}s, and {@link ActionFilters}.
  */
 public class ActionModule extends AbstractModule {
@@ -354,6 +354,7 @@ public class ActionModule extends AbstractModule {
     private final ActionFilters actionFilters;
     private final AutoCreateIndex autoCreateIndex;
     private final DestructiveOperations destructiveOperations;
+
     /**
      * 所有action的入口
      */
@@ -390,6 +391,7 @@ public class ActionModule extends AbstractModule {
                 restWrapper = newRestWrapper;
             }
         }
+        // 如果是传输客户端,则不设置rest风格的处理器, Node里是false
         if (transportClient) {
             restController = null;
         } else {

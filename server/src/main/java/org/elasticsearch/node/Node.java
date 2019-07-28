@@ -438,7 +438,8 @@ public class Node implements Closeable {
                     scriptModule.getScriptService(), xContentRegistry, environment, nodeEnvironment,
                     namedWriteableRegistry).stream())
                 .collect(Collectors.toList());
-            // Action模块
+
+            // Action模块, 注册所有action, 这些Action是针对TCP请求的， 也就是9300端口
             ActionModule actionModule = new ActionModule(false, settings, clusterModule.getIndexNameExpressionResolver(),
                 settingsModule.getIndexScopedSettings(), settingsModule.getClusterSettings(), settingsModule.getSettingsFilter(),
                 threadPool, pluginsService.filterPlugins(ActionPlugin.class), client, circuitBreakerService, usageService);
@@ -588,6 +589,7 @@ public class Node implements Closeable {
 
             if (NetworkModule.HTTP_ENABLED.get(settings)) {
                 logger.debug("initializing HTTP handlers ...");
+                // 注册所有Http Rest 请求的Action
                 actionModule.initRestHandlers(() -> clusterService.state().nodes());
             }
             logger.info("initialized");
@@ -694,7 +696,8 @@ public class Node implements Closeable {
         // Start the transport service now so the publish address will be added to the local disco node in ClusterService
         TransportService transportService = injector.getInstance(TransportService.class);
         transportService.getTaskManager().setTaskResultsService(injector.getInstance(TaskResultsService.class));
-        // 启动Netty4Transport,也就是启动内置的Netty容器,处理TPC/IP请求
+
+        // 启动Netty4Transport,也就是启动内置的Netty容器,处理TPC/IP请求, 綁定9300端口
         transportService.start();
 
         assert localNodeFactory.getNode() != null;
@@ -771,6 +774,7 @@ public class Node implements Closeable {
                 }
             }
         }
+
         // 启动针对Http请求的服务,启动Netty, 监听9200端口
         if (NetworkModule.HTTP_ENABLED.get(settings)) {
             injector.getInstance(HttpServerTransport.class).start();

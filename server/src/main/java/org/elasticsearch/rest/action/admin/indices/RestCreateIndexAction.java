@@ -32,6 +32,9 @@ import org.elasticsearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
 
+/**
+ * 创建索引的Action
+ */
 public class RestCreateIndexAction extends BaseRestHandler {
 
     private static final DeprecationLogger DEPRECATION_LOGGER = new DeprecationLogger(Loggers.getLogger(RestCreateIndexAction.class));
