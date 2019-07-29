@@ -84,7 +84,7 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
         if (request.refresh() && !request.realtime()) {
             indexShard.refresh("refresh_flag_get");
         }
-
+        // 获取doc
         GetResult result = indexShard.getService().get(request.type(), request.id(), request.storedFields(),
                 request.realtime(), request.version(), request.versionType(), request.fetchSourceContext());
         return new GetResponse(result);
