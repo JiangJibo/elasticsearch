@@ -57,8 +57,8 @@ public class ClusterService extends AbstractLifecycleComponent {
     private final ClusterApplierService clusterApplierService;
 
     public static final Setting<TimeValue> CLUSTER_SERVICE_SLOW_TASK_LOGGING_THRESHOLD_SETTING =
-            Setting.positiveTimeSetting("cluster.service.slow_task_logging_threshold", TimeValue.timeValueSeconds(30),
-                    Property.Dynamic, Property.NodeScope);
+        Setting.positiveTimeSetting("cluster.service.slow_task_logging_threshold", TimeValue.timeValueSeconds(30),
+            Property.Dynamic, Property.NodeScope);
 
     private final ClusterName clusterName;
 
@@ -245,20 +245,20 @@ public class ClusterService extends AbstractLifecycleComponent {
     }
 
     /**
+     * 提交一个集群状态变更的任务
      * Submits a cluster state update task; unlike {@link #submitStateUpdateTask(String, Object, ClusterStateTaskConfig,
      * ClusterStateTaskExecutor, ClusterStateTaskListener)}, submitted updates will not be batched.
      *
      * @param source     the source of the cluster state update task
      * @param updateTask the full context for the cluster state update
      *                   task
-     *
      */
-    public <T extends ClusterStateTaskConfig & ClusterStateTaskExecutor<T> & ClusterStateTaskListener>
-        void submitStateUpdateTask(String source, T updateTask) {
+    public <T extends ClusterStateTaskConfig & ClusterStateTaskExecutor<T> & ClusterStateTaskListener> void submitStateUpdateTask(String source, T updateTask) {
         submitStateUpdateTask(source, updateTask, updateTask, updateTask, updateTask);
     }
 
     /**
+     * 提交一个集群状态变更的任务
      * Submits a cluster state update task; submitted updates will be
      * batched across the same instance of executor. The exact batching
      * semantics depend on the underlying implementation but a rough
@@ -275,7 +275,6 @@ public class ClusterService extends AbstractLifecycleComponent {
      * @param listener callback after the cluster state update task
      *                 completes
      * @param <T>      the type of the cluster state update task state
-     *
      */
     public <T> void submitStateUpdateTask(String source, T task,
                                           ClusterStateTaskConfig config,
@@ -285,6 +284,7 @@ public class ClusterService extends AbstractLifecycleComponent {
     }
 
     /**
+     * 提交一个集群状态变更的任务
      * Submits a batch of cluster state update tasks; submitted updates are guaranteed to be processed together,
      * potentially with more tasks of the same executor.
      *
@@ -295,11 +295,11 @@ public class ClusterService extends AbstractLifecycleComponent {
      *                 that share the same executor will be executed
      *                 batches on this executor
      * @param <T>      the type of the cluster state update task state
-     *
      */
     public <T> void submitStateUpdateTasks(final String source,
                                            final Map<T, ClusterStateTaskListener> tasks, final ClusterStateTaskConfig config,
                                            final ClusterStateTaskExecutor<T> executor) {
+        // master服务去消费集群状态变更的任务
         masterService.submitStateUpdateTasks(source, tasks, config, executor);
     }
 }

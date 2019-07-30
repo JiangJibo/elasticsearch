@@ -137,11 +137,15 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
         Objects.requireNonNull(nodeConnectionsService, "please set the node connection service before starting");
         Objects.requireNonNull(state.get(), "please set initial state before starting");
         addListener(localNodeMasterListeners);
-        threadPoolExecutor = EsExecutors.newSinglePrioritizing(nodeName() + "/" + CLUSTER_UPDATE_THREAD_NAME, daemonThreadFactory(settings, CLUSTER_UPDATE_THREAD_NAME),
+        threadPoolExecutor = EsExecutors.newSinglePrioritizing(nodeName() + "/" + CLUSTER_UPDATE_THREAD_NAME,
+            daemonThreadFactory(settings, CLUSTER_UPDATE_THREAD_NAME),
             threadPool.getThreadContext(),
             threadPool.scheduler());
     }
 
+    /**
+     * 集群状态变更事件封装
+     */
     class UpdateTask extends SourcePrioritizedRunnable implements Function<ClusterState, ClusterState> {
 
         final ClusterStateTaskListener listener;
@@ -395,7 +399,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
     }
 
     /**
-     * 启动集群更新服务
+     * 启动集群状态更新服务
      *
      * @param task
      */
@@ -466,6 +470,13 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
         }
     }
 
+    /**
+     * 应用集群状态变更事件
+     *
+     * @param task
+     * @param previousClusterState
+     * @param newClusterState
+     */
     private void applyChanges(UpdateTask task, ClusterState previousClusterState, ClusterState newClusterState) {
         ClusterChangedEvent clusterChangedEvent = new ClusterChangedEvent(task.source, newClusterState, previousClusterState);
         // new cluster state, notify all listeners
@@ -514,6 +525,11 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
         });
     }
 
+    /**
+     * 调用集群状态监听器
+     *
+     * @param clusterChangedEvent
+     */
     private void callClusterStateListeners(ClusterChangedEvent clusterChangedEvent) {
         Stream.concat(clusterStateListeners.stream(), timeoutClusterStateListeners.stream()).forEach(listener -> {
             try {
