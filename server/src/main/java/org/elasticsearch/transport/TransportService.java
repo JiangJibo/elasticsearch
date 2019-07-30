@@ -604,6 +604,7 @@ public class TransportService extends AbstractLifecycleComponent {
             throw new IllegalStateException("can't send request to a null connection");
         }
         DiscoveryNode node = connection.getNode();
+        // 生成当前请求ID
         final long requestId = transport.newRequestId();
         final TimeoutHandler timeoutHandler;
         try {

@@ -90,6 +90,7 @@ final class PerThreadIDVersionAndSeqNoLookup {
         throws IOException {
         assert context.reader().getCoreCacheHelper().getKey().equals(readerKey) :
             "context's reader is not the same as the reader class was initialized on.";
+        // 根据term查询docID
         int docID = getDocID(id, context.reader().getLiveDocs());
 
         if (docID != DocIdSetIterator.NO_MORE_DOCS) {
@@ -116,6 +117,7 @@ final class PerThreadIDVersionAndSeqNoLookup {
             // there may be more than one matching docID, in the case of nested docs, so we want the last one:
             docsEnum = termsEnum.postings(docsEnum, 0);
             for (int d = docsEnum.nextDoc(); d != DocIdSetIterator.NO_MORE_DOCS; d = docsEnum.nextDoc()) {
+                // 如果docID已经被删除
                 if (liveDocs != null && liveDocs.get(d) == false) {
                     continue;
                 }

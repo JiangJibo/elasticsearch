@@ -19,7 +19,6 @@
 
 package org.elasticsearch.action.admin.indices.get;
 
-
 import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.get.GetIndexRequest.Feature;
 import org.elasticsearch.action.support.ActionFilters;
@@ -44,6 +43,7 @@ import java.io.IOException;
 import java.util.List;
 
 /**
+ * 处理获取索引数据的请求
  * Get index action.
  */
 public class TransportGetIndexAction extends TransportClusterInfoAction<GetIndexRequest, GetIndexResponse> {
@@ -52,10 +52,10 @@ public class TransportGetIndexAction extends TransportClusterInfoAction<GetIndex
 
     @Inject
     public TransportGetIndexAction(Settings settings, TransportService transportService, ClusterService clusterService,
-                                   ThreadPool threadPool, ActionFilters actionFilters,
-                                   IndexNameExpressionResolver indexNameExpressionResolver, IndicesService indicesService) {
+        ThreadPool threadPool, ActionFilters actionFilters,
+        IndexNameExpressionResolver indexNameExpressionResolver, IndicesService indicesService) {
         super(settings, GetIndexAction.NAME, transportService, clusterService, threadPool, actionFilters,
-                indexNameExpressionResolver, GetIndexRequest::new);
+            indexNameExpressionResolver, GetIndexRequest::new);
         this.indicesService = indicesService;
     }
 
@@ -68,7 +68,7 @@ public class TransportGetIndexAction extends TransportClusterInfoAction<GetIndex
     @Override
     protected ClusterBlockException checkBlock(GetIndexRequest request, ClusterState state) {
         return state.blocks().indicesBlockedException(ClusterBlockLevel.METADATA_READ,
-                indexNameExpressionResolver.concreteIndexNames(state, request));
+            indexNameExpressionResolver.concreteIndexNames(state, request));
     }
 
     @Override
@@ -78,7 +78,7 @@ public class TransportGetIndexAction extends TransportClusterInfoAction<GetIndex
 
     @Override
     protected void doMasterOperation(final GetIndexRequest request, String[] concreteIndices, final ClusterState state,
-                                     final ActionListener<GetIndexResponse> listener) {
+        final ActionListener<GetIndexResponse> listener) {
         ImmutableOpenMap<String, ImmutableOpenMap<String, MappingMetaData>> mappingsResult = ImmutableOpenMap.of();
         ImmutableOpenMap<String, List<AliasMetaData>> aliasesResult = ImmutableOpenMap.of();
         ImmutableOpenMap<String, Settings> settings = ImmutableOpenMap.of();
@@ -88,11 +88,11 @@ public class TransportGetIndexAction extends TransportClusterInfoAction<GetIndex
         boolean doneSettings = false;
         for (Feature feature : features) {
             switch (feature) {
-            case MAPPINGS:
+                case MAPPINGS:
                     if (!doneMappings) {
                         try {
                             mappingsResult = state.metaData().findMappings(concreteIndices, request.types(),
-                                    indicesService.getFieldFilter());
+                                indicesService.getFieldFilter());
                             doneMappings = true;
                         } catch (IOException e) {
                             listener.onFailure(e);
@@ -100,13 +100,13 @@ public class TransportGetIndexAction extends TransportClusterInfoAction<GetIndex
                         }
                     }
                     break;
-            case ALIASES:
+                case ALIASES:
                     if (!doneAliases) {
                         aliasesResult = state.metaData().findAliases(Strings.EMPTY_ARRAY, concreteIndices);
                         doneAliases = true;
                     }
                     break;
-            case SETTINGS:
+                case SETTINGS:
                     if (!doneSettings) {
                         ImmutableOpenMap.Builder<String, Settings> settingsMapBuilder = ImmutableOpenMap.builder();
                         for (String index : concreteIndices) {

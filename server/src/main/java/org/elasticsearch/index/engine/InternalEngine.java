@@ -541,6 +541,13 @@ public class InternalEngine extends Engine {
         return uuid;
     }
 
+    /**
+     * 创建外部的搜索器
+     *
+     * @param externalSearcherFactory
+     * @return
+     * @throws EngineException
+     */
     private ExternalSearcherManager createSearcherManager(SearchFactory externalSearcherFactory)
         throws EngineException {
         boolean success = false;
@@ -549,9 +556,11 @@ public class InternalEngine extends Engine {
             try {
                 final DirectoryReader directoryReader = ElasticsearchDirectoryReader.wrap(
                     DirectoryReader.open(indexWriter), shardId);
+                // 内部的搜索器
                 internalSearcherManager = new SearcherManager(directoryReader,
                     new RamAccountingSearcherFactory(engineConfig.getCircuitBreakerService()));
                 lastCommittedSegmentInfos = store.readLastCommittedSegmentsInfo();
+                // 外部搜索器
                 ExternalSearcherManager externalSearcherManager = new ExternalSearcherManager(internalSearcherManager,
                     externalSearcherFactory);
                 success = true;
@@ -572,18 +581,29 @@ public class InternalEngine extends Engine {
         }
     }
 
+    /**
+     * 查询数据
+     *
+     * @param get             get请求数据封装
+     * @param searcherFactory 搜索器创建工厂
+     * @return
+     * @throws EngineException
+     */
     @Override
     public GetResult get(Get get, BiFunction<String, SearcherScope, Searcher> searcherFactory) throws EngineException {
         assert Objects.equals(get.uid().field(), uidField) : get.uid().field();
+        // 获取读锁
         try (ReleasableLock ignored = readLock.acquire()) {
             ensureOpen();
             SearcherScope scope;
+            // 是否要求实时, 是的话则 搜索器的所用域就是内部的
             if (get.realtime()) {
                 VersionValue versionValue = null;
                 try (Releasable ignore = versionMap.acquireLock(get.uid().bytes())) {
                     // we need to lock here to access the version map to do this truly in RT
                     versionValue = getVersionFromMap(get.uid().bytes());
                 }
+                // 验证版本
                 if (versionValue != null) {
                     if (versionValue.isDelete()) {
                         return GetResult.NOT_EXISTS;
@@ -592,6 +612,7 @@ public class InternalEngine extends Engine {
                         throw new VersionConflictEngineException(shardId, get.type(), get.id(),
                             get.versionType().explainConflictForReads(versionValue.version, get.version()));
                     }
+                    // 如果数据指定从Translog里读取
                     if (get.isReadFromTranslog()) {
                         // this is only used for updates - API _GET calls will always read form a reader for consistency
                         // the update call doesn't need the consistency since it's source only + _parent but parent
@@ -618,10 +639,13 @@ public class InternalEngine extends Engine {
                             trackTranslogLocation.set(true);
                         }
                     }
+                    // 要求实时读取, 刷新内部的搜索器
                     refresh("realtime_get", SearcherScope.INTERNAL);
                 }
                 scope = SearcherScope.INTERNAL;
-            } else {
+            }
+            // 如果不是实时的, 那么搜索器的所用域就是外部的
+            else {
                 // we expose what has been externally expose in a point in time snapshot via an explicit refresh
                 scope = SearcherScope.EXTERNAL;
             }

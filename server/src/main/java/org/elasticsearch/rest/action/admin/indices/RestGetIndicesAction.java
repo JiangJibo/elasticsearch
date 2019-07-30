@@ -51,6 +51,7 @@ import static org.elasticsearch.rest.RestRequest.Method.HEAD;
 import static org.elasticsearch.rest.RestStatus.OK;
 
 /**
+ * 获取索引信息的Action
  * The REST handler for get index and head index APIs.
  */
 public class RestGetIndicesAction extends BaseRestHandler {
@@ -59,10 +60,10 @@ public class RestGetIndicesAction extends BaseRestHandler {
     private final SettingsFilter settingsFilter;
 
     public RestGetIndicesAction(
-            final Settings settings,
-            final RestController controller,
-            final IndexScopedSettings indexScopedSettings,
-            final SettingsFilter settingsFilter) {
+        final Settings settings,
+        final RestController controller,
+        final IndexScopedSettings indexScopedSettings,
+        final SettingsFilter settingsFilter) {
         super(settings);
         this.indexScopedSettings = indexScopedSettings;
         controller.registerHandler(GET, "/{index}", this);
@@ -79,96 +80,103 @@ public class RestGetIndicesAction extends BaseRestHandler {
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         String[] indices = Strings.splitStringByCommaToArray(request.param("index"));
         final GetIndexRequest getIndexRequest = new GetIndexRequest();
+        // 哪些索引
         getIndexRequest.indices(indices);
+        // 索引的过滤条件
         getIndexRequest.indicesOptions(IndicesOptions.fromRequest(request, getIndexRequest.indicesOptions()));
+        // 是否从当前服务器获取而不是从Master获取, 默认false
         getIndexRequest.local(request.paramAsBoolean("local", getIndexRequest.local()));
         getIndexRequest.humanReadable(request.paramAsBoolean("human", false));
         final boolean defaults = request.paramAsBoolean("include_defaults", false);
-        return channel -> client.admin().indices().getIndex(getIndexRequest, new RestBuilderListener<GetIndexResponse>(channel) {
 
-            @Override
-            public RestResponse buildResponse(final GetIndexResponse response, final XContentBuilder builder) throws Exception {
-                builder.startObject();
-                {
-                    for (final String index : response.indices()) {
-                        builder.startObject(index);
-                        {
-                            for (final Feature feature : getIndexRequest.features()) {
-                                switch (feature) {
-                                    case ALIASES:
-                                        writeAliases(response.aliases().get(index), builder, request);
-                                        break;
-                                    case MAPPINGS:
-                                        writeMappings(response.mappings().get(index), builder);
-                                        break;
-                                    case SETTINGS:
-                                        writeSettings(response.settings().get(index), builder, request, defaults);
-                                        break;
-                                    default:
-                                        throw new IllegalStateException("feature [" + feature + "] is not valid");
+        return channel -> client.admin().indices().getIndex(getIndexRequest,
+            new RestBuilderListener<GetIndexResponse>(channel) {
+
+                @Override
+                public RestResponse buildResponse(final GetIndexResponse response, final XContentBuilder builder)
+                    throws Exception {
+                    builder.startObject();
+                    {
+                        for (final String index : response.indices()) {
+                            builder.startObject(index);
+                            {
+                                for (final Feature feature : getIndexRequest.features()) {
+                                    switch (feature) {
+                                        case ALIASES:
+                                            writeAliases(response.aliases().get(index), builder, request);
+                                            break;
+                                        case MAPPINGS:
+                                            writeMappings(response.mappings().get(index), builder);
+                                            break;
+                                        case SETTINGS:
+                                            writeSettings(response.settings().get(index), builder, request, defaults);
+                                            break;
+                                        default:
+                                            throw new IllegalStateException("feature [" + feature + "] is not valid");
+                                    }
                                 }
                             }
+                            builder.endObject();
+
                         }
-                        builder.endObject();
-
                     }
+                    builder.endObject();
+
+                    return new BytesRestResponse(OK, builder);
                 }
-                builder.endObject();
 
-                return new BytesRestResponse(OK, builder);
-            }
-
-            private void writeAliases(
+                private void writeAliases(
                     final List<AliasMetaData> aliases,
                     final XContentBuilder builder,
                     final Params params) throws IOException {
-                builder.startObject("aliases");
-                {
-                    if (aliases != null) {
-                        for (final AliasMetaData alias : aliases) {
-                            AliasMetaData.Builder.toXContent(alias, builder, params);
+                    builder.startObject("aliases");
+                    {
+                        if (aliases != null) {
+                            for (final AliasMetaData alias : aliases) {
+                                AliasMetaData.Builder.toXContent(alias, builder, params);
+                            }
                         }
                     }
+                    builder.endObject();
                 }
-                builder.endObject();
-            }
 
-            private void writeMappings(final ImmutableOpenMap<String, MappingMetaData> mappings, final XContentBuilder builder)
+                private void writeMappings(final ImmutableOpenMap<String, MappingMetaData> mappings,
+                    final XContentBuilder builder)
                     throws IOException {
-                builder.startObject("mappings");
-                {
-                    if (mappings != null) {
-                        for (final ObjectObjectCursor<String, MappingMetaData> typeEntry : mappings) {
-                            builder.field(typeEntry.key);
-                            builder.map(typeEntry.value.sourceAsMap());
+                    builder.startObject("mappings");
+                    {
+                        if (mappings != null) {
+                            for (final ObjectObjectCursor<String, MappingMetaData> typeEntry : mappings) {
+                                builder.field(typeEntry.key);
+                                builder.map(typeEntry.value.sourceAsMap());
+                            }
                         }
                     }
+                    builder.endObject();
                 }
-                builder.endObject();
-            }
 
-            private void writeSettings(
+                private void writeSettings(
                     final Settings settings,
                     final XContentBuilder builder,
                     final Params params,
                     final boolean defaults) throws IOException {
-                builder.startObject("settings");
-                {
-                    settings.toXContent(builder, params);
-                }
-                builder.endObject();
-                if (defaults) {
-                    builder.startObject("defaults");
+                    builder.startObject("settings");
                     {
-                        settingsFilter
-                                .filter(indexScopedSettings.diff(settings, RestGetIndicesAction.this.settings))
-                                .toXContent(builder, request);
+                        settings.toXContent(builder, params);
                     }
                     builder.endObject();
+                    if (defaults) {
+                        builder.startObject("defaults");
+                        {
+                            settingsFilter
+                                .filter(indexScopedSettings.diff(settings, RestGetIndicesAction.this.settings))
+                                .toXContent(builder, request);
+                        }
+                        builder.endObject();
+                    }
                 }
-            }
 
-        });
+            });
     }
 
     @Override

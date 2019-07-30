@@ -394,7 +394,7 @@ public class Node implements Closeable {
             modules.add(clusterModule);
             IndicesModule indicesModule = new IndicesModule(pluginsService.filterPlugins(MapperPlugin.class));
             modules.add(indicesModule);
-            // 搜搜模块
+            // 搜索模块
             SearchModule searchModule = new SearchModule(settings, false, pluginsService.filterPlugins(SearchPlugin.class));
             // 熔断服务
             CircuitBreakerService circuitBreakerService = createCircuitBreakerService(settingsModule.getSettings(),

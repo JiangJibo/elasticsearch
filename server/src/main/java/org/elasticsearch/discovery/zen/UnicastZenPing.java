@@ -129,6 +129,9 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
     // used as a node id prefix for configured unicast host nodes/address
     private static final String UNICAST_NODE_PREFIX = "#zen_unicast_";
 
+    /**
+     * 当前作用中的Ping回环
+     */
     private final Map<Integer, PingingRound> activePingingRounds = newConcurrentMap();
 
     // a list of temporal responses a node will return for a request (holds responses from other nodes)
@@ -324,10 +327,11 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+        // 对其他插件提供的Node节点配置
         seedNodes.addAll(hostsProvider.buildDynamicNodes());
         final DiscoveryNodes nodes = contextProvider.clusterState().nodes();
         // add all possible master nodes that were active in the last known cluster configuration
-        // 通过上次的集群状态里获取节点信息
+        // 通过上次的集群状态里获取之前的Master节点信息
         for (ObjectCursor<DiscoveryNode> masterNode : nodes.getMasterNodes().values()) {
             seedNodes.add(masterNode.value);
         }
@@ -336,8 +340,8 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
             ConnectionProfile.buildSingleChannelProfile(TransportRequestOptions.Type.REG, requestDuration,
                 requestDuration);
         final PingingRound pingingRound = new PingingRound(pingingRoundIdGenerator.incrementAndGet(), seedNodes,
-            resultsConsumer,
-            nodes.getLocalNode(), connectionProfile);
+            resultsConsumer, nodes.getLocalNode(), connectionProfile);
+        // 设置当前正在作用中的Ping回环
         activePingingRounds.put(pingingRound.id(), pingingRound);
         final AbstractRunnable pingSender = new AbstractRunnable() {
             @Override
@@ -353,13 +357,17 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
             }
         };
         threadPool.generic().execute(pingSender);
+        // 时限1/3在发送一次
         threadPool.schedule(TimeValue.timeValueMillis(scheduleDuration.millis() / 3), ThreadPool.Names.GENERIC,
             pingSender);
+        // 时限2/3在发送一次
         threadPool.schedule(TimeValue.timeValueMillis(scheduleDuration.millis() / 3 * 2), ThreadPool.Names.GENERIC,
             pingSender);
+        // 时限结束前再Ping一次
         threadPool.schedule(scheduleDuration, ThreadPool.Names.GENERIC, new AbstractRunnable() {
             @Override
             protected void doRun() throws Exception {
+                // 关闭PingRound
                 finishPingingRound(pingingRound);
             }
 
@@ -376,6 +384,9 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
     }
 
     protected class PingingRound implements Releasable {
+        /**
+         * 第几次Ping
+         */
         private final int id;
         private final Map<TransportAddress, Connection> tempConnections = new HashMap<>();
         private final KeyedLock<TransportAddress> connectionLock = new KeyedLock<>(true);
@@ -478,7 +489,7 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
     }
 
     /**
-     * 发送一个ping确定是否存在
+     * 发送一个ping确定Node是否正常
      *
      * @param timeout
      * @param pingingRound
@@ -490,12 +501,11 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
 
         Set<DiscoveryNode> nodesFromResponses = temporalResponses.stream().map(pingResponse -> {
             assert clusterName.equals(pingResponse.clusterName()) :
-                "got a ping request from a different cluster. expected " + clusterName + " got " + pingResponse
-                    .clusterName();
+                "got a ping request from a different cluster. expected " + clusterName + " got " + pingResponse.clusterName();
             return pingResponse.node();
         }).collect(Collectors.toSet());
 
-        // dedup by address
+        // dedup by address, 唯一化Node的Address
         final Map<TransportAddress, DiscoveryNode> uniqueNodesByAddress =
             Stream.concat(pingingRound.getSeedNodes().stream(), nodesFromResponses.stream())
                 .collect(Collectors.toMap(DiscoveryNode::getAddress, Function.identity(), (n1, n2) -> n1));
@@ -595,6 +605,7 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
                             node);
                     }
                 } else {
+                    // 将Ping的结果放入 pingCollection 中
                     Stream.of(response.pingResponses).forEach(pingingRound::addPingResponseToCollection);
                 }
             }
@@ -612,6 +623,10 @@ public class UnicastZenPing extends AbstractComponent implements ZenPing {
         };
     }
 
+    /**处理Ping Request
+     * @param request
+     * @return
+     */
     private UnicastPingResponse handlePingRequest(final UnicastPingRequest request) {
         assert clusterName.equals(request.pingResponse.clusterName()) :
             "got a ping request from a different cluster. expected " + clusterName + " got " + request.pingResponse

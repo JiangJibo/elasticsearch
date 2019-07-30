@@ -195,7 +195,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
     }
 
     /**
-     * 启动集群服务
+     * 监听集群状态变更事件,启动集群服务
      *
      * @param event
      */

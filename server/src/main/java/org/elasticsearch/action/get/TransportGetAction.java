@@ -59,6 +59,13 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
         return true;
     }
 
+    /**
+     * 有哪些分片要执行
+     *
+     * @param state
+     * @param request
+     * @return
+     */
     @Override
     protected ShardIterator shards(ClusterState state, InternalRequest request) {
         return clusterService.operationRouting()

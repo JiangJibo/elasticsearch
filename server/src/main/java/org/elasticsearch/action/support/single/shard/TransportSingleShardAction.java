@@ -120,11 +120,23 @@ public abstract class TransportSingleShardAction<Request extends SingleShardRequ
     @Nullable
     protected abstract ShardsIterator shards(ClusterState state, InternalRequest request);
 
+    /**
+     * 异步的单个的Action
+     */
     class AsyncSingleAction {
 
         private final ActionListener<Response> listener;
+        /**
+         * 有哪些分片可能被使用
+         */
         private final ShardsIterator shardIt;
+        /**
+         *  请求及索引名称
+         */
         private final InternalRequest internalRequest;
+        /**
+         * 集群Nodes
+         */
         private final DiscoveryNodes nodes;
         private volatile Exception lastFailure;
 
@@ -158,6 +170,9 @@ public abstract class TransportSingleShardAction<Request extends SingleShardRequ
             this.shardIt = shards(clusterState, internalRequest);
         }
 
+        /**
+         * 执行action
+         */
         public void start() {
             if (shardIt == null) {
                 // just execute it on the local node
@@ -194,6 +209,11 @@ public abstract class TransportSingleShardAction<Request extends SingleShardRequ
             perform(e);
         }
 
+        /**
+         * 执行请求
+         *
+         * @param currentFailure
+         */
         private void perform(@Nullable final Exception currentFailure) {
             Exception lastFailure = this.lastFailure;
             if (lastFailure == null || TransportActions.isReadOverrideException(currentFailure)) {
@@ -211,6 +231,7 @@ public abstract class TransportSingleShardAction<Request extends SingleShardRequ
                 listener.onFailure(failure);
                 return;
             }
+            // 找到分片所在的节点
             DiscoveryNode node = nodes.get(shardRouting.currentNodeId());
             if (node == null) {
                 onFailure(shardRouting, new NoShardAvailableActionException(shardRouting.shardId()));

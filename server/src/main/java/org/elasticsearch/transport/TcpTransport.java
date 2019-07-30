@@ -221,6 +221,9 @@ public abstract class TcpTransport extends AbstractLifecycleComponent implements
     protected final ConnectionProfile defaultConnectionProfile;
 
     private final ConcurrentMap<Long, HandshakeResponseHandler> pendingHandshakes = new ConcurrentHashMap<>();
+    /**
+     * RequestId生成器,每次请求自增1
+     */
     private final AtomicLong requestIdGenerator = new AtomicLong();
     private final CounterMetric numHandshakes = new CounterMetric();
     private static final String HANDSHAKE_ACTION_NAME = "internal:tcp/handshake";

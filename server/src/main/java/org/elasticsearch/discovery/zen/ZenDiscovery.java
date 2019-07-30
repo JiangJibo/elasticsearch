@@ -489,9 +489,10 @@ public class ZenDiscovery extends AbstractLifecycleComponent
         }
         // 如果当前节点被选举为master节点
         if (transportService.getLocalNode().equals(masterNode)) {
-            // 需要等待其他的Node来join
+            // 需要等待多少个Node来join
             final int requiredJoins = Math.max(0, electMaster.minimumMasterNodes() - 1); // we count as one
             logger.debug("elected as master, waiting for incoming joins ([{}] needed)", requiredJoins);
+            // 等待其他Node来join当前master
             nodeJoinController.waitToBeElectedAsMaster(requiredJoins, masterElectionWaitForJoinsTimeout,
                 new NodeJoinController.ElectionCallback() {
                     @Override
