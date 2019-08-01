@@ -94,7 +94,8 @@ import static java.util.Collections.emptyMap;
 import static java.util.Collections.unmodifiableMap;
 import static org.elasticsearch.common.collect.MapBuilder.newMapBuilder;
 
-public class IndexService extends AbstractIndexComponent implements IndicesClusterStateService.AllocatedIndex<IndexShard> {
+public class IndexService extends AbstractIndexComponent
+    implements IndicesClusterStateService.AllocatedIndex<IndexShard> {
 
     private final IndexEventListener eventListener;
     private final IndexFieldDataService indexFieldData;
@@ -159,13 +160,16 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
         this.similarityService = similarityService;
         this.namedWriteableRegistry = namedWriteableRegistry;
         this.circuitBreakerService = circuitBreakerService;
-        this.mapperService = new MapperService(indexSettings, registry.build(indexSettings), xContentRegistry, similarityService,
+        this.mapperService = new MapperService(indexSettings, registry.build(indexSettings), xContentRegistry,
+            similarityService,
             mapperRegistry,
             // we parse all percolator queries as they would be parsed on shard 0
             () -> newQueryShardContext(0, null, System::currentTimeMillis, null));
-        this.indexFieldData = new IndexFieldDataService(indexSettings, indicesFieldDataCache, circuitBreakerService, mapperService);
+        this.indexFieldData = new IndexFieldDataService(indexSettings, indicesFieldDataCache, circuitBreakerService,
+            mapperService);
         if (indexSettings.getIndexSortConfig().hasIndexSort()) {
-            // we delay the actual creation of the sort order for this index because the mapping has not been merged yet.
+            // we delay the actual creation of the sort order for this index because the mapping has not been merged
+            // yet.
             // The sort order is validated right after the merge of the mapping later in the process.
             this.indexSortSupplier = () -> indexSettings.getIndexSortConfig().buildIndexSort(
                 mapperService::fullName,
@@ -317,7 +321,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
      * @return
      * @throws IOException
      */
-    public synchronized IndexShard createShard(ShardRouting routing, Consumer<ShardId> globalCheckpointSyncer) throws IOException {
+    public synchronized IndexShard createShard(ShardRouting routing, Consumer<ShardId> globalCheckpointSyncer)
+        throws IOException {
         /*
          * TODO: we execute this in parallel but it's a synced method. Yet, we might
          * be able to serialize the execution via the cluster state in the future. for now we just
@@ -350,7 +355,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
             }
 
             if (path == null) {
-                // TODO: we should, instead, hold a "bytes reserved" of how large we anticipate this shard will be, e.g. for a shard
+                // TODO: we should, instead, hold a "bytes reserved" of how large we anticipate this shard will be, e
+                //  .g. for a shard
                 // that's being relocated/replicated we know how large it will become once it's done copying:
                 // Count up how many shards are currently on each data path:
                 Map<Path, Integer> dataPathToShardCount = new HashMap<>();
@@ -422,7 +428,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
         logger.debug("[{}] closed (reason: [{}])", shardId, reason);
     }
 
-    private void closeShard(String reason, ShardId sId, IndexShard indexShard, Store store, IndexEventListener listener) {
+    private void closeShard(String reason, ShardId sId, IndexShard indexShard, Store store,
+        IndexEventListener listener) {
         final int shardId = sId.id();
         final Settings indexSettings = this.getIndexSettings().getSettings();
         try {
@@ -489,7 +496,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
      * Passing a {@code null} {@link IndexReader} will return a valid context, however it won't be able to make
      * {@link IndexReader}-specific optimizations, such as rewriting containing range queries.
      */
-    public QueryShardContext newQueryShardContext(int shardId, IndexReader indexReader, LongSupplier nowInMillis, String clusterAlias) {
+    public QueryShardContext newQueryShardContext(int shardId, IndexReader indexReader, LongSupplier nowInMillis,
+        String clusterAlias) {
         return new QueryShardContext(
             shardId, indexSettings, indexCache.bitsetFilterCache(), indexFieldData::getForField, mapperService(),
             similarityService(), scriptService, xContentRegistry,
@@ -544,7 +552,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
         @Override
         public void accept(ShardLock lock) {
             try {
-                assert lock.getShardId().equals(shardId) : "shard id mismatch, expected: " + shardId + " but got: " + lock.getShardId();
+                assert lock.getShardId().equals(shardId) : "shard id mismatch, expected: " + shardId + " but got: "
+                    + lock.getShardId();
                 onShardClose(lock);
             } finally {
                 try {
@@ -644,12 +653,18 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
         }
     }
 
+    /**
+     * 重新定时的Force Sync Task, 强制持久化任务
+     *
+     * @param durability
+     */
     private void rescheduleFsyncTask(Translog.Durability durability) {
         try {
             if (fsyncTask != null) {
                 fsyncTask.close();
             }
         } finally {
+            // 如果不是按高层级请求来执行的，那么需要一个定时的持久化任务
             fsyncTask = durability == Translog.Durability.REQUEST ? null : new AsyncTranslogFSync(this);
         }
     }
@@ -697,6 +712,9 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
         }
     }
 
+    /**
+     * 刷新存储引擎
+     */
     private void maybeRefreshEngine() {
         if (indexSettings.getRefreshInterval().millis() > 0) {
             for (IndexShard shard : this.shards.values()) {
@@ -755,7 +773,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
                                         }
                                     },
                                     e -> {
-                                        if (!(e instanceof AlreadyClosedException || e instanceof IndexShardClosedException)) {
+                                        if (!(e instanceof AlreadyClosedException
+                                            || e instanceof IndexShardClosedException)) {
                                             logger.info(
                                                 new ParameterizedMessage(
                                                     "{} failed to execute background global checkpoint sync",
@@ -819,7 +838,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
                 runInternal();
             } catch (Exception ex) {
                 if (lastThrownException == null || sameException(lastThrownException, ex) == false) {
-                    // prevent the annoying fact of logging the same stuff all the time with an interval of 1 sec will spam all your logs
+                    // prevent the annoying fact of logging the same stuff all the time with an interval of 1 sec
+                    // will spam all your logs
                     indexService.logger.warn(
                         () -> new ParameterizedMessage(
                             "failed to run task {} - suppressing re-occurring exceptions unless the exception changes",
@@ -924,7 +944,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
 
         AsyncTrimTranslogTask(IndexService indexService) {
             super(indexService, indexService.getIndexSettings()
-                .getSettings().getAsTime(INDEX_TRANSLOG_RETENTION_CHECK_INTERVAL_SETTING, TimeValue.timeValueMinutes(10)));
+                .getSettings()
+                .getAsTime(INDEX_TRANSLOG_RETENTION_CHECK_INTERVAL_SETTING, TimeValue.timeValueMinutes(10)));
         }
 
         @Override
@@ -959,7 +980,8 @@ public class IndexService extends AbstractIndexComponent implements IndicesClust
 
         AsyncGlobalCheckpointTask(final IndexService indexService) {
             // index.global_checkpoint_sync_interval is not a real setting, it is only registered in tests
-            super(indexService, GLOBAL_CHECKPOINT_SYNC_INTERVAL_SETTING.get(indexService.getIndexSettings().getSettings()));
+            super(indexService,
+                GLOBAL_CHECKPOINT_SYNC_INTERVAL_SETTING.get(indexService.getIndexSettings().getSettings()));
         }
 
         @Override

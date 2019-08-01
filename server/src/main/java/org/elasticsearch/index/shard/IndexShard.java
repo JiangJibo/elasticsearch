@@ -491,7 +491,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
                             + "]";
                     /*
                      * Before this call returns, we are guaranteed that all future operations are delayed and so this
-                      * happens before we
+                     * happens before we
                      * increment the primary term. The latch is needed to ensure that we do not unblock operations
                      * before the primary term is
                      * incremented.
@@ -513,7 +513,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
                                  * its local checkpoint tracker was reset during the primary term transition. In
                                  * particular, the local
                                  * checkpoint on this shard was thrown back to the global checkpoint and the state of
-                                  * the local checkpoint
+                                 * the local checkpoint
                                  * tracker above the local checkpoint was destroyed. If the other shard that was
                                  * promoted to primary
                                  * subsequently fails before the primary/replica re-sync completes successfully and
@@ -645,9 +645,9 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
                     "in-flight operations in progress while moving shard state to relocated";
                 /*
                  * We should not invoke the runnable under the mutex as the expected implementation is to handoff the
-                  * primary context via a
+                 * primary context via a
                  * network operation. Doing this under the mutex can implicitly block the cluster state update thread
-                  * on network operations.
+                 * on network operations.
                  */
                 verifyRelocatingState();
                 final ReplicationTracker.PrimaryContext primaryContext = replicationTracker.startRelocationHandoff();
@@ -1091,6 +1091,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     }
 
     /**
+     * 提交Lucene数据至磁盘
      * Executes the given flush request against the engine.
      *
      * @param request the flush request
@@ -1727,7 +1728,9 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     }
 
     /**
+     * 存储引擎是否应该被定期的Flush
      * Tests whether or not the engine should be flushed periodically.
+     * 基于当前tarnslog的大小与配置的flush阈值的对比
      * This test is based on the current size of the translog compared to the configured flush threshold size.
      *
      * @return {@code true} if the engine should be flushed
@@ -1736,6 +1739,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
         final Engine engine = getEngineOrNull();
         if (engine != null) {
             try {
+                // 存储引擎是否该被flush
                 return engine.shouldPeriodicallyFlush();
             } catch (final AlreadyClosedException e) {
                 // we are already closed, no need to flush or roll
@@ -2021,9 +2025,9 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
              * ignore the global checkpoint update. This can happen if we are in the translog stage of recovery.
              * Prior to this, the engine
              * is not opened and this shard will not receive global checkpoint updates, and after this the shard will
-              * be contributing to
+             * be contributing to
              * calculations of the global checkpoint. However, we can not assert that we are in the translog stage of
-              * recovery here as
+             * recovery here as
              * while the global checkpoint update may have emanated from the primary when we were in that state, we
              * could subsequently move
              * to recovery finalization, or even finished recovery before the update arrives here.
@@ -2590,6 +2594,7 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
     private final AtomicBoolean flushOrRollRunning = new AtomicBoolean();
 
     /**
+     * 在写操作完成后
      * Schedules a flush or translog generation roll if needed but will not schedule more than one concurrently. The
      * operation will be
      * executed asynchronously on the flush thread pool.
@@ -2601,13 +2606,14 @@ public class IndexShard extends AbstractIndexShardComponent implements IndicesCl
                  * We have to check again since otherwise there is a race when a thread passes the first check next
                  * to another thread which
                  * performs the operation quickly enough to  finish before the current thread could flip the flag. In
-                  * that situation, we
+                 * that situation, we
                  * have an extra operation.
                  *
                  * Additionally, a flush implicitly executes a translog generation roll so if we execute a flush then
-                  * we do not need to
+                 * we do not need to
                  * check if we should roll the translog generation.
                  */
+                // 是否到了定期Flush数据的时候了
                 if (shouldPeriodicallyFlush()) {
                     logger.debug("submitting async flush request");
                     final AbstractRunnable flush = new AbstractRunnable() {

@@ -1596,6 +1596,11 @@ public class InternalEngine extends Engine {
         return renewed;
     }
 
+    /**
+     * 是否应该触发Flush
+     *
+     * @return
+     */
     @Override
     public boolean shouldPeriodicallyFlush() {
         ensureOpen();

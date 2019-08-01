@@ -19,9 +19,12 @@
 
 package org.elasticsearch.rest.action.admin.indices;
 
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
+import org.elasticsearch.action.admin.indices.delete.TransportDeleteIndexAction;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
+import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.rest.BaseRestHandler;
@@ -31,6 +34,11 @@ import org.elasticsearch.rest.action.RestToXContentListener;
 
 import java.io.IOException;
 
+/**
+ * 处理逻辑见
+ *
+ * @see TransportDeleteIndexAction#masterOperation(DeleteIndexRequest, ClusterState, ActionListener)
+ */
 public class RestDeleteIndexAction extends BaseRestHandler {
     public RestDeleteIndexAction(Settings settings, RestController controller) {
         super(settings);
@@ -45,9 +53,11 @@ public class RestDeleteIndexAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
-        DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(Strings.splitStringByCommaToArray(request.param("index")));
+        DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(
+            Strings.splitStringByCommaToArray(request.param("index")));
         deleteIndexRequest.timeout(request.paramAsTime("timeout", deleteIndexRequest.timeout()));
-        deleteIndexRequest.masterNodeTimeout(request.paramAsTime("master_timeout", deleteIndexRequest.masterNodeTimeout()));
+        deleteIndexRequest.masterNodeTimeout(
+            request.paramAsTime("master_timeout", deleteIndexRequest.masterNodeTimeout()));
         deleteIndexRequest.indicesOptions(IndicesOptions.fromRequest(request, deleteIndexRequest.indicesOptions()));
         return channel -> client.admin().indices().delete(deleteIndexRequest, new RestToXContentListener<>(channel));
     }

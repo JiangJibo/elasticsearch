@@ -54,38 +54,46 @@ public class MetaDataDeleteIndexService extends AbstractComponent {
     private final AllocationService allocationService;
 
     @Inject
-    public MetaDataDeleteIndexService(Settings settings, ClusterService clusterService, AllocationService allocationService) {
+    public MetaDataDeleteIndexService(Settings settings, ClusterService clusterService,
+        AllocationService allocationService) {
         super(settings);
         this.clusterService = clusterService;
         this.allocationService = allocationService;
     }
 
     public void deleteIndices(final DeleteIndexClusterStateUpdateRequest request,
-            final ActionListener<ClusterStateUpdateResponse> listener) {
+        final ActionListener<ClusterStateUpdateResponse> listener) {
         if (request.indices() == null || request.indices().length == 0) {
             throw new IllegalArgumentException("Index name is required");
         }
-
+        // 集群服务提交删除索引任务, 这样集群状态变更了能通知所有的监听器
         clusterService.submitStateUpdateTask("delete-index " + Arrays.toString(request.indices()),
             new AckedClusterStateUpdateTask<ClusterStateUpdateResponse>(Priority.URGENT, request, listener) {
 
-            @Override
-            protected ClusterStateUpdateResponse newResponse(boolean acknowledged) {
-                return new ClusterStateUpdateResponse(acknowledged);
-            }
+                @Override
+                protected ClusterStateUpdateResponse newResponse(boolean acknowledged) {
+                    return new ClusterStateUpdateResponse(acknowledged);
+                }
 
-            @Override
-            public ClusterState execute(final ClusterState currentState) {
-                return deleteIndices(currentState, Sets.newHashSet(request.indices()));
-            }
-        });
+                @Override
+                public ClusterState execute(final ClusterState currentState) {
+                    // 执行删除索引
+                    return deleteIndices(currentState, Sets.newHashSet(request.indices()));
+                }
+            });
     }
 
     /**
+     * 从集群状态中删除一些索引, 这样发布状态后同步变化
      * Delete some indices from the cluster state.
+     *
+     * @param currentState
+     * @param indices
+     * @return 返回新的集群状态, 好同步给其他的节点
      */
     public ClusterState deleteIndices(ClusterState currentState, Set<Index> indices) {
         final MetaData meta = currentState.metaData();
+        // 收集待删除的索引的元数据信息
         final Set<IndexMetaData> metaDatas = indices.stream().map(i -> meta.getIndexSafe(i)).collect(toSet());
         // Check if index deletion conflicts with any running snapshots
         SnapshotsService.checkIndexDeletion(currentState, metaDatas);
@@ -98,14 +106,18 @@ public class MetaDataDeleteIndexService extends AbstractComponent {
         for (final Index index : indices) {
             String indexName = index.getName();
             logger.info("{} deleting index", index);
+            // 路由表删除索引
             routingTableBuilder.remove(indexName);
+
             clusterBlocksBuilder.removeIndexBlocks(indexName);
+            // 删除索引元数据
             metaDataBuilder.remove(indexName);
         }
         // add tombstones to the cluster state for each deleted index
         final IndexGraveyard currentGraveyard = graveyardBuilder.addTombstones(indices).build(settings);
         metaDataBuilder.indexGraveyard(currentGraveyard); // the new graveyard set on the metadata
-        logger.trace("{} tombstones purged from the cluster state. Previous tombstone size: {}. Current tombstone size: {}.",
+        logger.trace(
+            "{} tombstones purged from the cluster state. Previous tombstone size: {}. Current tombstone size: {}.",
             graveyardBuilder.getNumPurged(), previousGraveyardSize, currentGraveyard.getTombstones().size());
 
         MetaData newMetaData = metaDataBuilder.build();
@@ -115,7 +127,8 @@ public class MetaDataDeleteIndexService extends AbstractComponent {
         ImmutableOpenMap<String, ClusterState.Custom> customs = currentState.getCustoms();
         final RestoreInProgress restoreInProgress = currentState.custom(RestoreInProgress.TYPE);
         if (restoreInProgress != null) {
-            RestoreInProgress updatedRestoreInProgress = RestoreService.updateRestoreStateWithDeletedIndices(restoreInProgress, indices);
+            RestoreInProgress updatedRestoreInProgress = RestoreService.updateRestoreStateWithDeletedIndices(
+                restoreInProgress, indices);
             if (updatedRestoreInProgress != restoreInProgress) {
                 ImmutableOpenMap.Builder<String, ClusterState.Custom> builder = ImmutableOpenMap.builder(customs);
                 builder.put(RestoreInProgress.TYPE, updatedRestoreInProgress);
@@ -124,12 +137,12 @@ public class MetaDataDeleteIndexService extends AbstractComponent {
         }
 
         return allocationService.reroute(
-                ClusterState.builder(currentState)
-                    .routingTable(routingTableBuilder.build())
-                    .metaData(newMetaData)
-                    .blocks(blocks)
-                    .customs(customs)
-                    .build(),
-                "deleted indices [" + indices + "]");
+            ClusterState.builder(currentState)
+                .routingTable(routingTableBuilder.build())
+                .metaData(newMetaData)
+                .blocks(blocks)
+                .customs(customs)
+                .build(),
+            "deleted indices [" + indices + "]");
     }
 }

@@ -20,6 +20,7 @@
 package org.elasticsearch.rest.action.admin.indices;
 
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingRequest;
+import org.elasticsearch.action.admin.indices.mapping.put.TransportPutMappingAction;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
@@ -37,6 +38,10 @@ import static org.elasticsearch.client.Requests.putMappingRequest;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.rest.RestRequest.Method.PUT;
 
+/**
+ * 构建索引映射Action
+ * 处理逻辑见 {@link TransportPutMappingAction}
+ */
 public class RestPutMappingAction extends BaseRestHandler {
 
     private static final DeprecationLogger DEPRECATION_LOGGER = new DeprecationLogger(Loggers.getLogger(RestPutMappingAction.class));
@@ -72,14 +77,19 @@ public class RestPutMappingAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
+        // 索引名称
         PutMappingRequest putMappingRequest = putMappingRequest(Strings.splitStringByCommaToArray(request.param("index")));
+        // type
         putMappingRequest.type(request.param("type"));
+        // 内容
         putMappingRequest.source(request.requiredContent(), request.getXContentType());
         if (request.hasParam("update_all_types")) {
             DEPRECATION_LOGGER.deprecated("[update_all_types] is deprecated since indices may not have more than one type anymore");
         }
         putMappingRequest.updateAllTypes(request.paramAsBoolean("update_all_types", false));
+        // 超时设置
         putMappingRequest.timeout(request.paramAsTime("timeout", putMappingRequest.timeout()));
+        // master节点超时设置
         putMappingRequest.masterNodeTimeout(request.paramAsTime("master_timeout", putMappingRequest.masterNodeTimeout()));
         putMappingRequest.indicesOptions(IndicesOptions.fromRequest(request, putMappingRequest.indicesOptions()));
         return channel -> client.admin().indices().putMapping(putMappingRequest, new RestToXContentListener<>(channel));
