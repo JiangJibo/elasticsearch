@@ -53,18 +53,31 @@ public class RestGetAction extends BaseRestHandler {
         return "document_get_action";
     }
 
+    /**
+     * 处理查询请求
+     *
+     * @param request the request to execute
+     * @param client  client for executing actions on the local node
+     * @return
+     * @throws IOException
+     */
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
         final GetRequest getRequest = new GetRequest(request.param("index"), request.param("type"), request.param("id"));
+        // 在读取前是否要刷新, 默认false
         getRequest.refresh(request.paramAsBoolean("refresh", getRequest.refresh()));
+        // 是否制定了路由
         getRequest.routing(request.param("routing"));
         getRequest.parent(request.param("parent"));
+        // 优先选择哪个节点, "_local":当前节点;  "_primary":主节点
         getRequest.preference(request.param("preference"));
+        // 是否实时, 默认true
         getRequest.realtime(request.paramAsBoolean("realtime", getRequest.realtime()));
         if (request.param("fields") != null) {
             throw new IllegalArgumentException("the parameter [fields] is no longer supported, " +
                 "please use [stored_fields] to retrieve stored fields or [_source] to load the field from _source");
         }
+        // 指定查询那些Field
         final String fieldsParam = request.param("stored_fields");
         if (fieldsParam != null) {
             final String[] fields = Strings.splitStringByCommaToArray(fieldsParam);
@@ -72,10 +85,11 @@ public class RestGetAction extends BaseRestHandler {
                 getRequest.storedFields(fields);
             }
         }
-
+        // 数据版本
         getRequest.version(RestActions.parseVersion(request));
-        getRequest.versionType(VersionType.fromString(request.param("version_type"), getRequest.versionType()));
 
+        getRequest.versionType(VersionType.fromString(request.param("version_type"), getRequest.versionType()));
+        // 构建要查询的Field的上下文信息,就是制定查询那些Field,排除那些Field
         getRequest.fetchSourceContext(FetchSourceContext.parseFromRestRequest(request));
 
         return channel -> client.get(getRequest, new RestToXContentListener<GetResponse>(channel) {

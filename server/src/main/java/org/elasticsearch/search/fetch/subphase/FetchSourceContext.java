@@ -90,22 +90,29 @@ public class FetchSourceContext implements Writeable, ToXContentObject {
     }
 
     public static FetchSourceContext parseFromRestRequest(RestRequest request) {
+        // 是否要查询source
         Boolean fetchSource = null;
         String[] source_excludes = null;
         String[] source_includes = null;
-
+        // 是否要查询source
         String source = request.param("_source");
         if (source != null) {
+            // 是
             if (Booleans.isTrue(source)) {
                 fetchSource = true;
-            } else if (Booleans.isFalse(source)) {
+            }
+            // 否
+            else if (Booleans.isFalse(source)) {
                 fetchSource = false;
-            } else {
+            }
+            // 要查询那些Field
+            else {
                 source_includes = Strings.splitStringByCommaToArray(source);
             }
         }
         String sIncludes = request.param("_source_includes");
         sIncludes = request.param("_source_include", sIncludes);
+        // 要查询那些Field, 优先取 _source_include ,其次 _source_includes , 最后_source
         if (sIncludes != null) {
             source_includes = Strings.splitStringByCommaToArray(sIncludes);
         }
@@ -113,6 +120,7 @@ public class FetchSourceContext implements Writeable, ToXContentObject {
         String sExcludes = request.param("_source_excludes");
         sExcludes = request.param("_source_exclude", sExcludes);
         if (sExcludes != null) {
+            // 排除那些Field
             source_excludes = Strings.splitStringByCommaToArray(sExcludes);
         }
 

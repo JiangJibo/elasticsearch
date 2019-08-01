@@ -47,6 +47,7 @@ public class TransportSyncedFlushAction extends HandledTransportAction<SyncedFlu
 
     @Override
     protected void doExecute(SyncedFlushRequest request, ActionListener<SyncedFlushResponse> listener) {
+        // 尝试执行flush
         syncedFlushService.attemptSyncedFlush(request.indices(), request.indicesOptions(), listener);
     }
 }
