@@ -31,6 +31,9 @@ public abstract class AbstractComponent {
 
     protected final Logger logger;
     protected final DeprecationLogger deprecationLogger;
+    /**
+     * Node级别配置
+     */
     protected final Settings settings;
 
     public AbstractComponent(Settings settings) {

@@ -50,13 +50,15 @@ import java.util.function.Function;
  * be called for each settings update.
  */
 public final class IndexSettings {
+
     public static final String DEFAULT_FIELD_SETTING_KEY = "index.query.default_field";
     public static final Setting<List<String>> DEFAULT_FIELD_SETTING;
+
     static {
         Function<Settings, List<String>> defValue = settings -> {
             final String defaultField;
             if (settings.getAsVersion(IndexMetaData.SETTING_VERSION_CREATED, null) != null &&
-                    Version.indexCreated(settings).before(Version.V_6_0_0_alpha1)) {
+                Version.indexCreated(settings).before(Version.V_6_0_0_alpha1)) {
                 defaultField = AllFieldMapper.NAME;
             } else {
                 defaultField = "*";
@@ -65,6 +67,7 @@ public final class IndexSettings {
         };
         DEFAULT_FIELD_SETTING = Setting.listSetting(DEFAULT_FIELD_SETTING_KEY, defValue, Function.identity(), Property.IndexScope, Property.Dynamic);
     }
+
     public static final Setting<Boolean> QUERY_STRING_LENIENT_SETTING =
         Setting.boolSetting("index.query_string.lenient", false, Property.IndexScope);
     public static final Setting<Boolean> QUERY_STRING_ANALYZE_WILDCARD =
@@ -93,14 +96,15 @@ public final class IndexSettings {
     public static final Setting<Boolean> INDEX_TTL_DISABLE_PURGE_SETTING =
         Setting.boolSetting("index.ttl.disable_purge", false, Property.Dynamic, Property.IndexScope, Property.Deprecated);
     public static final Setting<String> INDEX_CHECK_ON_STARTUP = new Setting<>("index.shard.check_on_startup", "false", (s) -> {
-        switch(s) {
+        switch (s) {
             case "false":
             case "true":
             case "fix":
             case "checksum":
                 return s;
             default:
-                throw new IllegalArgumentException("unknown value for [index.shard.check_on_startup] must be one of [true, false, fix, checksum] but was: " + s);
+                throw new IllegalArgumentException(
+                    "unknown value for [index.shard.check_on_startup] must be one of [true, false, fix, checksum] but was: " + s);
         }
     }, Property.IndexScope);
 
@@ -131,7 +135,6 @@ public final class IndexSettings {
     public static final Setting<Integer> MAX_INNER_RESULT_WINDOW_SETTING =
         Setting.intSetting("index.max_inner_result_window", 100, 1, Property.Dynamic, Property.IndexScope);
 
-
     /**
      * A setting describing the maximum number of characters that will be analyzed for a highlight request.
      * This setting is only applicable when highlighting is requested on a text that was indexed without
@@ -141,7 +144,6 @@ public final class IndexSettings {
      */
     public static final Setting<Integer> MAX_ANALYZED_OFFSET_SETTING =
         Setting.intSetting("index.highlight.max_analyzed_offset", -1, -1, Property.Dynamic, Property.IndexScope);
-
 
     /**
      * Index setting describing the maximum number of terms that can be used in Terms Query.
@@ -183,7 +185,7 @@ public final class IndexSettings {
      * because they both do the same thing: control the size of the heap of hits.
      */
     public static final Setting<Integer> MAX_RESCORE_WINDOW_SETTING =
-            Setting.intSetting("index.max_rescore_window", MAX_RESULT_WINDOW_SETTING, 1, Property.Dynamic, Property.IndexScope);
+        Setting.intSetting("index.max_rescore_window", MAX_RESULT_WINDOW_SETTING, 1, Property.Dynamic, Property.IndexScope);
     /**
      * Index setting describing the maximum number of filters clauses that can be used
      * in an adjacency_matrix aggregation. The max number of buckets produced by
@@ -229,19 +231,19 @@ public final class IndexSettings {
      * translog operations that have not been flushed.
      */
     public static final Setting<ByteSizeValue> INDEX_TRANSLOG_GENERATION_THRESHOLD_SIZE_SETTING =
-            Setting.byteSizeSetting(
-                    "index.translog.generation_threshold_size",
-                    new ByteSizeValue(64, ByteSizeUnit.MB),
-                    /*
-                     * An empty translog occupies 55 bytes on disk. If the generation threshold is
-                     * below this, the flush thread can get stuck in an infinite loop repeatedly
-                     * rolling the generation as every new generation will already exceed the
-                     * generation threshold. However, small thresholds are useful for testing so we
-                     * do not add a large lower bound here.
-                     */
-                    new ByteSizeValue(Translog.DEFAULT_HEADER_SIZE_IN_BYTES + 1, ByteSizeUnit.BYTES),
-                    new ByteSizeValue(Long.MAX_VALUE, ByteSizeUnit.BYTES),
-                    Property.Dynamic, Property.IndexScope);
+        Setting.byteSizeSetting(
+            "index.translog.generation_threshold_size",
+            new ByteSizeValue(64, ByteSizeUnit.MB),
+            /*
+             * An empty translog occupies 55 bytes on disk. If the generation threshold is
+             * below this, the flush thread can get stuck in an infinite loop repeatedly
+             * rolling the generation as every new generation will already exceed the
+             * generation threshold. However, small thresholds are useful for testing so we
+             * do not add a large lower bound here.
+             */
+            new ByteSizeValue(Translog.DEFAULT_HEADER_SIZE_IN_BYTES + 1, ByteSizeUnit.BYTES),
+            new ByteSizeValue(Long.MAX_VALUE, ByteSizeUnit.BYTES),
+            Property.Dynamic, Property.IndexScope);
 
     /**
      * Index setting to enable / disable deletes garbage collection.
@@ -255,7 +257,7 @@ public final class IndexSettings {
      * The maximum number of refresh listeners allows on this shard.
      */
     public static final Setting<Integer> MAX_REFRESH_LISTENERS_PER_SHARD = Setting.intSetting("index.max_refresh_listeners", 1000, 0,
-            Property.Dynamic, Property.IndexScope);
+        Property.Dynamic, Property.IndexScope);
 
     /**
      * The maximum number of slices allowed in a scroll request
@@ -265,6 +267,7 @@ public final class IndexSettings {
 
     public static final String INDEX_MAPPING_SINGLE_TYPE_SETTING_KEY = "index.mapping.single_type";
     private static final Setting<Boolean> INDEX_MAPPING_SINGLE_TYPE_SETTING; // private - should not be registered
+
     static {
         Function<Settings, String> defValue = settings -> {
             boolean singleType = true;
@@ -281,7 +284,13 @@ public final class IndexSettings {
     private final Version version;
     private final Logger logger;
     private final String nodeName;
+    /**
+     * 节点配置
+     */
     private final Settings nodeSettings;
+    /**
+     * 分片数
+     */
     private final int numberOfShards;
     // volatile fields are updated via #updateIndexMetaData(IndexMetaData) under lock
     private volatile Settings settings;
@@ -293,6 +302,9 @@ public final class IndexSettings {
     private final boolean defaultAllowUnmappedFields;
     private volatile Translog.Durability durability;
     private final TimeValue syncInterval;
+    /**
+     * 索引刷新间隔
+     */
     private volatile TimeValue refreshInterval;
     private volatile ByteSizeValue flushThresholdSize;
     private volatile TimeValue translogRetentionAge;
@@ -372,26 +384,32 @@ public final class IndexSettings {
      * while index level settings will overwrite node settings.
      *
      * @param indexMetaData the index metadata this settings object is associated with
-     * @param nodeSettings the nodes settings this index is allocated on.
+     * @param nodeSettings  the nodes settings this index is allocated on.
      */
     public IndexSettings(final IndexMetaData indexMetaData, final Settings nodeSettings) {
         this(indexMetaData, nodeSettings, IndexScopedSettings.DEFAULT_SCOPED_SETTINGS);
     }
 
     /**
+     * 优先使用 indexMetaData 里的配置, 不存在后使用 nodeSettings，也就是默认配置
      * Creates a new {@link IndexSettings} instance. The given node settings will be merged with the settings in the metadata
      * while index level settings will overwrite node settings.
      *
-     * @param indexMetaData the index metadata this settings object is associated with
-     * @param nodeSettings the nodes settings this index is allocated on.
+     * @param indexMetaData       the index metadata this settings object is associated with  创建索引请求,内含配置信息,  优先级最高
+     * @param nodeSettings        the nodes settings this index is allocated on. Node级别的配置  ,                      优先级较低
+     * @param indexScopedSettings 索引级别的配置Key, 含有索引需要的所有配置的key, 从Node和Metadata里获取
      */
     public IndexSettings(final IndexMetaData indexMetaData, final Settings nodeSettings, IndexScopedSettings indexScopedSettings) {
+        // 从Node和 indexMetaData 里拷贝配置信息
         scopedSettings = indexScopedSettings.copy(nodeSettings, indexMetaData);
         this.nodeSettings = nodeSettings;
+        // 整合配置, 如果indexMetaData 里的配置和 nodeSettings 的相同, 会覆盖前者
         this.settings = Settings.builder().put(nodeSettings).put(indexMetaData.getSettings()).build();
+        // 索引名称
         this.index = indexMetaData.getIndex();
         version = Version.indexCreated(settings);
         logger = Loggers.getLogger(getClass(), settings, index);
+        //
         nodeName = Node.NODE_NAME_SETTING.get(settings);
         this.indexMetaData = indexMetaData;
         numberOfShards = settings.getAsInt(IndexMetaData.SETTING_NUMBER_OF_SHARDS, null);
@@ -427,18 +445,21 @@ public final class IndexSettings {
         this.indexSortConfig = new IndexSortConfig(this);
         singleType = INDEX_MAPPING_SINGLE_TYPE_SETTING.get(indexMetaData.getSettings()); // get this from metadata - it's not registered
         if ((singleType || version.before(Version.V_6_0_0_alpha1)) == false) {
-            throw new AssertionError(index.toString()  + "multiple types are only allowed on pre 6.x indices but version is: ["
+            throw new AssertionError(index.toString() + "multiple types are only allowed on pre 6.x indices but version is: ["
                 + version + "]");
         }
 
         scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_COMPOUND_FORMAT_SETTING, mergePolicyConfig::setNoCFSRatio);
-        scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_EXPUNGE_DELETES_ALLOWED_SETTING, mergePolicyConfig::setExpungeDeletesAllowed);
+        scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_EXPUNGE_DELETES_ALLOWED_SETTING,
+            mergePolicyConfig::setExpungeDeletesAllowed);
         scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_FLOOR_SEGMENT_SETTING, mergePolicyConfig::setFloorSegmentSetting);
         scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_MAX_MERGE_AT_ONCE_SETTING, mergePolicyConfig::setMaxMergesAtOnce);
-        scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_MAX_MERGE_AT_ONCE_EXPLICIT_SETTING, mergePolicyConfig::setMaxMergesAtOnceExplicit);
+        scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_MAX_MERGE_AT_ONCE_EXPLICIT_SETTING,
+            mergePolicyConfig::setMaxMergesAtOnceExplicit);
         scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_MAX_MERGED_SEGMENT_SETTING, mergePolicyConfig::setMaxMergedSegment);
         scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_SEGMENTS_PER_TIER_SETTING, mergePolicyConfig::setSegmentsPerTier);
-        scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_RECLAIM_DELETES_WEIGHT_SETTING, mergePolicyConfig::setReclaimDeletesWeight);
+        scopedSettings.addSettingsUpdateConsumer(MergePolicyConfig.INDEX_MERGE_POLICY_RECLAIM_DELETES_WEIGHT_SETTING,
+            mergePolicyConfig::setReclaimDeletesWeight);
 
         scopedSettings.addSettingsUpdateConsumer(MergeSchedulerConfig.MAX_THREAD_COUNT_SETTING, MergeSchedulerConfig.MAX_MERGE_COUNT_SETTING,
             mergeSchedulerConfig::setMaxThreadAndMergeCount);
@@ -456,8 +477,8 @@ public final class IndexSettings {
         scopedSettings.addSettingsUpdateConsumer(INDEX_GC_DELETES_SETTING, this::setGCDeletes);
         scopedSettings.addSettingsUpdateConsumer(INDEX_TRANSLOG_FLUSH_THRESHOLD_SIZE_SETTING, this::setTranslogFlushThresholdSize);
         scopedSettings.addSettingsUpdateConsumer(
-                INDEX_TRANSLOG_GENERATION_THRESHOLD_SIZE_SETTING,
-                this::setGenerationThresholdSize);
+            INDEX_TRANSLOG_GENERATION_THRESHOLD_SIZE_SETTING,
+            this::setGenerationThresholdSize);
         scopedSettings.addSettingsUpdateConsumer(INDEX_TRANSLOG_RETENTION_AGE_SETTING, this::setTranslogRetentionAge);
         scopedSettings.addSettingsUpdateConsumer(INDEX_TRANSLOG_RETENTION_SIZE_SETTING, this::setTranslogRetentionSize);
         scopedSettings.addSettingsUpdateConsumer(INDEX_REFRESH_INTERVAL_SETTING, this::setRefreshInterval);
@@ -528,6 +549,7 @@ public final class IndexSettings {
 
     /**
      * Returns the version the index was created on.
+     *
      * @see Version#indexCreated(Settings)
      */
     public Version getIndexVersionCreated() {
@@ -737,7 +759,7 @@ public final class IndexSettings {
     private void setMaxShingleDiff(int maxShingleDiff) { this.maxShingleDiff = maxShingleDiff; }
 
     /**
-     *  Returns the maximum number of chars that will be analyzed in a highlight request
+     * Returns the maximum number of chars that will be analyzed in a highlight request
      */
     public int getHighlightMaxAnalyzedOffset() { return this.maxAnalyzedOffset; }
 
@@ -750,11 +772,11 @@ public final class IndexSettings {
     }
 
     /**
-     *  Returns the maximum number of terms that can be used in a Terms Query request
+     * Returns the maximum number of terms that can be used in a Terms Query request
      */
     public int getMaxTermsCount() { return this.maxTermsCount; }
 
-    private void setMaxTermsCount (int maxTermsCount) { this.maxTermsCount = maxTermsCount; }
+    private void setMaxTermsCount(int maxTermsCount) { this.maxTermsCount = maxTermsCount; }
 
     /**
      * Returns the maximum number of allowed script_fields to retrieve in a search request

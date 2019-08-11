@@ -21,6 +21,7 @@ package org.elasticsearch.rest.action.document;
 
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.get.TransportGetAction;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.settings.Settings;
@@ -40,6 +41,9 @@ import static org.elasticsearch.rest.RestRequest.Method.HEAD;
 import static org.elasticsearch.rest.RestStatus.NOT_FOUND;
 import static org.elasticsearch.rest.RestStatus.OK;
 
+/**
+ * @see  TransportGetAction
+ */
 public class RestGetAction extends BaseRestHandler {
 
     public RestGetAction(final Settings settings, final RestController controller) {

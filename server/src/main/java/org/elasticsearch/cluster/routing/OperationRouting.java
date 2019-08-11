@@ -144,6 +144,15 @@ public class OperationRouting extends AbstractComponent {
         return set;
     }
 
+    /**
+     * @param indexShard
+     * @param localNodeId
+     * @param nodes
+     * @param preference
+     * @param collectorService
+     * @param nodeCounts
+     * @return
+     */
     private ShardIterator preferenceActiveShardIterator(IndexShardRoutingTable indexShard, String localNodeId,
                                                         DiscoveryNodes nodes, @Nullable String preference,
                                                         @Nullable ResponseCollectorService collectorService,
@@ -275,8 +284,19 @@ public class OperationRouting extends AbstractComponent {
         return indexMetaData;
     }
 
+    /**
+     * 找到分片路由列表
+     *
+     * @param clusterState
+     * @param index
+     * @param id
+     * @param routing
+     * @return
+     */
     protected IndexShardRoutingTable shards(ClusterState clusterState, String index, String id, String routing) {
+        // 获取分片ID
         int shardId = generateShardId(indexMetaData(clusterState, index), id, routing);
+        // 返回指定分片
         return clusterState.getRoutingTable().shardRoutingTable(index, shardId);
     }
 
@@ -305,7 +325,7 @@ public class OperationRouting extends AbstractComponent {
         }
         // 如果可路由的分区数量 != 1
         if (indexMetaData.isRoutingPartitionedIndex()) {
-            // Math.floorMod == %
+            // Math.floorMod == % 分片的偏移量
             partitionOffset = Math.floorMod(Murmur3HashFunction.hash(id), indexMetaData.getRoutingPartitionSize());
         } else {
             // we would have still got 0 above but this check just saves us an unnecessary hash calculation

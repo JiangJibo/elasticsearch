@@ -643,6 +643,7 @@ public class IndexService extends AbstractIndexComponent
                             "[{}] failed to notify shard about setting change", shard.shardId().id()), e);
                 }
             }
+            // 更新索引refresh间隔
             if (refreshTask.getInterval().equals(indexSettings.getRefreshInterval()) == false) {
                 rescheduleRefreshTasks();
             }
@@ -673,6 +674,7 @@ public class IndexService extends AbstractIndexComponent
         try {
             refreshTask.close();
         } finally {
+            // 重启一个刷新任务
             refreshTask = new AsyncRefreshTask(this);
         }
     }
@@ -918,12 +920,18 @@ public class IndexService extends AbstractIndexComponent
         }
     }
 
+    /**
+     * 异步刷新索引任务,默认间隔1S
+     */
     final class AsyncRefreshTask extends BaseAsyncTask {
 
         AsyncRefreshTask(IndexService indexService) {
             super(indexService, indexService.getIndexSettings().getRefreshInterval());
         }
 
+        /**
+         * 执行索引刷新任务
+         */
         @Override
         protected void runInternal() {
             indexService.maybeRefreshEngine();

@@ -130,7 +130,7 @@ public class Setting<T> implements ToXContentObject {
     private Setting(Key key, @Nullable Setting<T> fallbackSetting, Function<Settings, String> defaultValue, Function<String, T> parser,
                     Validator<T> validator, Property... properties) {
         assert this instanceof SecureSetting || this.isGroupSetting() || parser.apply(defaultValue.apply(Settings.EMPTY)) != null
-               : "parser returned null";
+            : "parser returned null";
         this.key = key;
         this.fallbackSetting = fallbackSetting;
         this.defaultValue = defaultValue;
@@ -151,13 +151,15 @@ public class Setting<T> implements ToXContentObject {
 
     /**
      * Creates a new Setting instance
-     * @param key the settings key for this setting.
+     *
+     * @param key          the settings key for this setting.
      * @param defaultValue a default value function that returns the default values string representation.
-     * @param parser a parser that parses the string rep into a complex datatype.
-     * @param properties properties for this setting like scope, filtering...
+     * @param parser       a parser that parses the string rep into a complex datatype.
+     * @param properties   properties for this setting like scope, filtering...
      */
     public Setting(Key key, Function<Settings, String> defaultValue, Function<String, T> parser, Property... properties) {
-        this(key, defaultValue, parser, (v, s) -> {}, properties);
+        this(key, defaultValue, parser, (v, s) -> {
+        }, properties);
     }
 
     /**
@@ -170,16 +172,17 @@ public class Setting<T> implements ToXContentObject {
      * @param properties   properties for this setting
      */
     public Setting(
-            Key key, Function<Settings, String> defaultValue, Function<String, T> parser, Validator<T> validator, Property... properties) {
+        Key key, Function<Settings, String> defaultValue, Function<String, T> parser, Validator<T> validator, Property... properties) {
         this(key, null, defaultValue, parser, validator, properties);
     }
 
     /**
      * Creates a new Setting instance
-     * @param key the settings key for this setting.
+     *
+     * @param key          the settings key for this setting.
      * @param defaultValue a default value.
-     * @param parser a parser that parses the string rep into a complex datatype.
-     * @param properties properties for this setting like scope, filtering...
+     * @param parser       a parser that parses the string rep into a complex datatype.
+     * @param properties   properties for this setting like scope, filtering...
      */
     public Setting(String key, String defaultValue, Function<String, T> parser, Property... properties) {
         this(key, s -> defaultValue, parser, properties);
@@ -200,10 +203,11 @@ public class Setting<T> implements ToXContentObject {
 
     /**
      * Creates a new Setting instance
-     * @param key the settings key for this setting.
+     *
+     * @param key          the settings key for this setting.
      * @param defaultValue a default value function that returns the default values string representation.
-     * @param parser a parser that parses the string rep into a complex datatype.
-     * @param properties properties for this setting like scope, filtering...
+     * @param parser       a parser that parses the string rep into a complex datatype.
+     * @param properties   properties for this setting like scope, filtering...
      */
     public Setting(String key, Function<Settings, String> defaultValue, Function<String, T> parser, Property... properties) {
         this(new SimpleKey(key), defaultValue, parser, properties);
@@ -211,21 +215,24 @@ public class Setting<T> implements ToXContentObject {
 
     /**
      * Creates a new Setting instance
-     * @param key the settings key for this setting.
+     *
+     * @param key             the settings key for this setting.
      * @param fallbackSetting a setting who's value to fallback on if this setting is not defined
-     * @param parser a parser that parses the string rep into a complex datatype.
-     * @param properties properties for this setting like scope, filtering...
+     * @param parser          a parser that parses the string rep into a complex datatype.
+     * @param properties      properties for this setting like scope, filtering...
      */
     public Setting(Key key, Setting<T> fallbackSetting, Function<String, T> parser, Property... properties) {
-        this(key, fallbackSetting, fallbackSetting::getRaw, parser, (v, m) -> {}, properties);
+        this(key, fallbackSetting, fallbackSetting::getRaw, parser, (v, m) -> {
+        }, properties);
     }
 
     /**
      * Creates a new Setting instance
-     * @param key the settings key for this setting.
+     *
+     * @param key             the settings key for this setting.
      * @param fallBackSetting a setting to fall back to if the current setting is not set.
-     * @param parser a parser that parses the string rep into a complex datatype.
-     * @param properties properties for this setting like scope, filtering...
+     * @param parser          a parser that parses the string rep into a complex datatype.
+     * @param properties      properties for this setting like scope, filtering...
      */
     public Setting(String key, Setting<T> fallBackSetting, Function<String, T> parser, Property... properties) {
         this(new SimpleKey(key), fallBackSetting, parser, properties);
@@ -265,6 +272,7 @@ public class Setting<T> implements ToXContentObject {
 
     /**
      * Returns the setting properties
+     *
      * @see Property
      */
     public EnumSet<Property> getProperties() {
@@ -314,6 +322,7 @@ public class Setting<T> implements ToXContentObject {
 
     /**
      * Returns the default value string representation for this setting.
+     *
      * @param settings a settings object for settings that has a default value depending on another setting if available
      */
     public String getDefaultRaw(Settings settings) {
@@ -322,6 +331,7 @@ public class Setting<T> implements ToXContentObject {
 
     /**
      * Returns the default value for this setting.
+     *
      * @param settings a settings object for settings that has a default value depending on another setting if available
      */
     public T getDefault(Settings settings) {
@@ -376,8 +386,9 @@ public class Setting<T> implements ToXContentObject {
     /**
      * Add this setting to the builder if it doesn't exists in the source settings.
      * The value added to the builder is taken from the given default settings object.
-     * @param builder the settings builder to fill the diff into
-     * @param source the source settings object to diff
+     *
+     * @param builder         the settings builder to fill the diff into
+     * @param source          the source settings object to diff
      * @param defaultSettings the default settings object to diff against
      */
     public void diff(Settings.Builder builder, Settings source, Settings defaultSettings) {
@@ -395,23 +406,26 @@ public class Setting<T> implements ToXContentObject {
         return settings.get(getKey(), defaultValue.apply(settings));
     }
 
-    /** Logs a deprecation warning if the setting is deprecated and used. */
+    /**
+     * Logs a deprecation warning if the setting is deprecated and used.
+     */
     void checkDeprecation(Settings settings) {
         // They're using the setting, so we need to tell them to stop
         if (this.isDeprecated() && this.exists(settings)) {
             // It would be convenient to show its replacement key, but replacement is often not so simple
             final String key = getKey();
             Settings.DeprecationLoggerHolder.deprecationLogger.deprecatedAndMaybeLog(
-                    key,
-                    "[{}] setting was deprecated in Elasticsearch and will be removed in a future release! "
-                            + "See the breaking changes documentation for the next major version.",
-                    key);
+                key,
+                "[{}] setting was deprecated in Elasticsearch and will be removed in a future release! "
+                    + "See the breaking changes documentation for the next major version.",
+                key);
         }
     }
 
     /**
      * Returns <code>true</code> iff the given key matches the settings key or if this setting is a group setting if the
      * given key is part of the settings group.
+     *
      * @see #isGroupSetting()
      */
     public final boolean match(String toTest) {
@@ -436,6 +450,10 @@ public class Setting<T> implements ToXContentObject {
 
     /**
      * Returns the value for this setting but falls back to the second provided settings object
+     *
+     * @param primary   优先配置
+     * @param secondary 次级配置
+     * @return
      */
     public final T get(Settings primary, Settings secondary) {
         if (exists(primary)) {
@@ -471,7 +489,8 @@ public class Setting<T> implements ToXContentObject {
      * Build a new updater with a noop validator.
      */
     final AbstractScopedSettings.SettingUpdater<T> newUpdater(Consumer<T> consumer, Logger logger) {
-        return newUpdater(consumer, logger, (s) -> {});
+        return newUpdater(consumer, logger, (s) -> {
+        });
     }
 
     /**
@@ -491,7 +510,8 @@ public class Setting<T> implements ToXContentObject {
      * See {@link AbstractScopedSettings#addSettingsUpdateConsumer(Setting, Setting, BiConsumer)} and its usage for details.
      */
     static <A, B> AbstractScopedSettings.SettingUpdater<Tuple<A, B>> compoundUpdater(final BiConsumer<A, B> consumer,
-            final BiConsumer<A, B> validator, final Setting<A> aSetting, final Setting<B> bSetting, Logger logger) {
+                                                                                     final BiConsumer<A, B> validator, final Setting<A> aSetting,
+                                                                                     final Setting<B> bSetting, Logger logger) {
         final AbstractScopedSettings.SettingUpdater<A> aSettingUpdater = aSetting.newUpdater(null, logger);
         final AbstractScopedSettings.SettingUpdater<B> bSettingUpdater = bSetting.newUpdater(null, logger);
         return new AbstractScopedSettings.SettingUpdater<Tuple<A, B>>() {
@@ -567,6 +587,7 @@ public class Setting<T> implements ToXContentObject {
     }
 
     public static class AffixSetting<T> extends Setting<T> {
+
         private final AffixKey key;
         private final Function<String, Setting<T>> delegateFactory;
         private final Set<AffixSetting> dependencies;
@@ -601,7 +622,7 @@ public class Setting<T> implements ToXContentObject {
 
                 @Override
                 public boolean hasChanged(Settings current, Settings previous) {
-                    return  Stream.concat(matchStream(current), matchStream(previous)).findAny().isPresent();
+                    return Stream.concat(matchStream(current), matchStream(previous)).findAny().isPresent();
                 }
 
                 @Override
@@ -650,7 +671,8 @@ public class Setting<T> implements ToXContentObject {
                         String namespace = key.getNamespace(aKey);
                         Setting<T> concreteSetting = getConcreteSetting(aKey);
                         AbstractScopedSettings.SettingUpdater<T> updater =
-                            concreteSetting.newUpdater((v) -> {}, logger, (v) -> validator.accept(namespace, v));
+                            concreteSetting.newUpdater((v) -> {
+                            }, logger, (v) -> validator.accept(namespace, v));
                         if (updater.hasChanged(current, previous)) {
                             // only the ones that have changed otherwise we might get too many updates
                             // the hasChanged above checks only if there are any changes
@@ -769,6 +791,7 @@ public class Setting<T> implements ToXContentObject {
     }
 
     private static class GroupSetting extends Setting<Settings> {
+
         private final String key;
         private final Consumer<Settings> validator;
 
@@ -820,7 +843,7 @@ public class Setting<T> implements ToXContentObject {
             Settings defaultGroup = get(defaultSettings);
 
             builder.put(Settings.builder().put(defaultGroup.filter(k -> leftGroup.contains(k) == false), false)
-                    .normalizePrefix(getKey()).build(), false);
+                .normalizePrefix(getKey()).build(), false);
         }
 
         @Override
@@ -847,7 +870,7 @@ public class Setting<T> implements ToXContentObject {
                         validator.accept(currentSettings);
                     } catch (Exception | AssertionError e) {
                         throw new IllegalArgumentException("illegal value can't update [" + key + "] from ["
-                                + previousSettings + "] to [" + currentSettings+ "]", e);
+                            + previousSettings + "] to [" + currentSettings + "]", e);
                     }
                     return currentSettings;
                 }
@@ -867,6 +890,7 @@ public class Setting<T> implements ToXContentObject {
     }
 
     private static class ListSetting<T> extends Setting<List<T>> {
+
         private final Function<Settings, List<String>> defaultStringValue;
 
         private ListSetting(String key, Function<Settings, List<String>> defaultStringValue, Function<String, List<T>> parser,
@@ -901,6 +925,7 @@ public class Setting<T> implements ToXContentObject {
     }
 
     private final class Updater implements AbstractScopedSettings.SettingUpdater<T> {
+
         private final Consumer<T> consumer;
         private final Logger logger;
         private final Consumer<T> accept;
@@ -936,7 +961,7 @@ public class Setting<T> implements ToXContentObject {
                 return inst;
             } catch (Exception | AssertionError e) {
                 throw new IllegalArgumentException("illegal value can't update [" + key + "] from [" + value + "] to [" + newValue + "]",
-                        e);
+                    e);
             }
         }
 
@@ -946,7 +971,6 @@ public class Setting<T> implements ToXContentObject {
             consumer.accept(value);
         }
     }
-
 
     public static Setting<Float> floatSetting(String key, float defaultValue, Property... properties) {
         return new Setting<>(key, (s) -> Float.toString(defaultValue), Float::parseFloat, properties);
@@ -976,7 +1000,7 @@ public class Setting<T> implements ToXContentObject {
 
     public static Setting<Integer> intSetting(String key, Setting<Integer> fallbackSetting, int minValue, Validator<Integer> validator,
                                               Property... properties) {
-        return new Setting<>(new SimpleKey(key), fallbackSetting, fallbackSetting::getRaw, (s) -> parseInt(s, minValue, key),validator,
+        return new Setting<>(new SimpleKey(key), fallbackSetting, fallbackSetting::getRaw, (s) -> parseInt(s, minValue, key), validator,
             properties);
     }
 
@@ -1072,20 +1096,20 @@ public class Setting<T> implements ToXContentObject {
         ByteSizeValue value = ByteSizeValue.parseBytesSizeValue(s, key);
         if (value.getBytes() < minValue.getBytes()) {
             final String message = String.format(
-                    Locale.ROOT,
-                    "failed to parse value [%s] for setting [%s], must be >= [%s]",
-                    s,
-                    key,
-                    minValue.getStringRep());
+                Locale.ROOT,
+                "failed to parse value [%s] for setting [%s], must be >= [%s]",
+                s,
+                key,
+                minValue.getStringRep());
             throw new IllegalArgumentException(message);
         }
         if (value.getBytes() > maxValue.getBytes()) {
             final String message = String.format(
-                    Locale.ROOT,
-                    "failed to parse value [%s] for setting [%s], must be <= [%s]",
-                    s,
-                    key,
-                    maxValue.getStringRep());
+                Locale.ROOT,
+                "failed to parse value [%s] for setting [%s], must be <= [%s]",
+                s,
+                key,
+                maxValue.getStringRep());
             throw new IllegalArgumentException(message);
         }
         return value;
@@ -1096,24 +1120,23 @@ public class Setting<T> implements ToXContentObject {
      * specified as an absolute bytes value or as a percentage of the heap
      * memory.
      *
-     * @param key the key for the setting
+     * @param key          the key for the setting
      * @param defaultValue the default value for this setting
-     * @param properties properties properties for this setting like scope, filtering...
+     * @param properties   properties properties for this setting like scope, filtering...
      * @return the setting object
      */
     public static Setting<ByteSizeValue> memorySizeSetting(String key, ByteSizeValue defaultValue, Property... properties) {
         return memorySizeSetting(key, (s) -> defaultValue.toString(), properties);
     }
 
-
     /**
      * Creates a setting which specifies a memory size. This can either be
      * specified as an absolute bytes value or as a percentage of the heap
      * memory.
      *
-     * @param key the key for the setting
+     * @param key          the key for the setting
      * @param defaultValue a function that supplies the default value for this setting
-     * @param properties properties properties for this setting like scope, filtering...
+     * @param properties   properties properties for this setting like scope, filtering...
      * @return the setting object
      */
     public static Setting<ByteSizeValue> memorySizeSetting(String key, Function<Settings, String> defaultValue, Property... properties) {
@@ -1125,9 +1148,9 @@ public class Setting<T> implements ToXContentObject {
      * specified as an absolute bytes value or as a percentage of the heap
      * memory.
      *
-     * @param key the key for the setting
+     * @param key               the key for the setting
      * @param defaultPercentage the default value of this setting as a percentage of the heap memory
-     * @param properties properties properties for this setting like scope, filtering...
+     * @param properties        properties properties for this setting like scope, filtering...
      * @return the setting object
      */
     public static Setting<ByteSizeValue> memorySizeSetting(String key, String defaultPercentage, Property... properties) {
@@ -1151,7 +1174,7 @@ public class Setting<T> implements ToXContentObject {
             throw new IllegalArgumentException("default value function must not return null");
         }
         Function<String, List<T>> parser = (s) ->
-                parseableStringToList(s).stream().map(singleValueParser).collect(Collectors.toList());
+            parseableStringToList(s).stream().map(singleValueParser).collect(Collectors.toList());
 
         return new ListSetting<>(key, defaultStringValue, parser, properties);
     }
@@ -1159,7 +1182,7 @@ public class Setting<T> implements ToXContentObject {
     private static List<String> parseableStringToList(String parsableString) {
         // fromXContent doesn't use named xcontent or deprecation.
         try (XContentParser xContentParser = XContentType.JSON.xContent()
-                .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, parsableString)) {
+            .createParser(NamedXContentRegistry.EMPTY, DeprecationHandler.THROW_UNSUPPORTED_OPERATION, parsableString)) {
             XContentParser.Token token = xContentParser.nextToken();
             if (token != XContentParser.Token.START_ARRAY) {
                 throw new IllegalArgumentException("expected START_ARRAY but got " + token);
@@ -1202,7 +1225,8 @@ public class Setting<T> implements ToXContentObject {
     }
 
     public static Setting<Settings> groupSetting(String key, Property... properties) {
-        return groupSetting(key, (s) -> {}, properties);
+        return groupSetting(key, (s) -> {
+        }, properties);
     }
 
     public static Setting<Settings> groupSetting(String key, Consumer<Settings> validator, Property... properties) {
@@ -1248,9 +1272,9 @@ public class Setting<T> implements ToXContentObject {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Setting<?> setting = (Setting<?>) o;
+        if (this == o) { return true; }
+        if (o == null || getClass() != o.getClass()) { return false; }
+        Setting<?> setting = (Setting<?>)o;
         return Objects.equals(key, setting.key);
     }
 
@@ -1285,10 +1309,12 @@ public class Setting<T> implements ToXContentObject {
     }
 
     public interface Key {
+
         boolean match(String key);
     }
 
     public static class SimpleKey implements Key {
+
         protected final String key;
 
         public SimpleKey(String key) {
@@ -1307,9 +1333,9 @@ public class Setting<T> implements ToXContentObject {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            SimpleKey simpleKey = (SimpleKey) o;
+            if (this == o) { return true; }
+            if (o == null || getClass() != o.getClass()) { return false; }
+            SimpleKey simpleKey = (SimpleKey)o;
             return Objects.equals(key, simpleKey.key);
         }
 
@@ -1320,6 +1346,7 @@ public class Setting<T> implements ToXContentObject {
     }
 
     public static final class GroupKey extends SimpleKey {
+
         public GroupKey(String key) {
             super(key);
             if (key.endsWith(".") == false) {
@@ -1334,6 +1361,7 @@ public class Setting<T> implements ToXContentObject {
     }
 
     public static final class ListKey extends SimpleKey {
+
         private final Pattern pattern;
 
         public ListKey(String key) {
@@ -1352,6 +1380,7 @@ public class Setting<T> implements ToXContentObject {
      * that have dynamic namespaces like for different accounts etc.
      */
     public static final class AffixKey implements Key {
+
         private final Pattern pattern;
         private final String prefix;
         private final String suffix;
@@ -1361,7 +1390,7 @@ public class Setting<T> implements ToXContentObject {
         }
 
         AffixKey(String prefix, String suffix) {
-            assert prefix != null || suffix != null: "Either prefix or suffix must be non-null";
+            assert prefix != null || suffix != null : "Either prefix or suffix must be non-null";
 
             this.prefix = prefix;
             if (prefix.endsWith(".") == false) {
@@ -1432,9 +1461,9 @@ public class Setting<T> implements ToXContentObject {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-            AffixKey that = (AffixKey) o;
+            if (this == o) { return true; }
+            if (o == null || getClass() != o.getClass()) { return false; }
+            AffixKey that = (AffixKey)o;
             return Objects.equals(prefix, that.prefix) &&
                 Objects.equals(suffix, that.suffix);
         }

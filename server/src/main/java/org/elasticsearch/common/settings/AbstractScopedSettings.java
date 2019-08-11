@@ -46,11 +46,21 @@ import java.util.stream.Collectors;
  * This service offers transactional application of updates settings.
  */
 public abstract class AbstractScopedSettings extends AbstractComponent {
+
     public static final String ARCHIVED_SETTINGS_PREFIX = "archived.";
+    /**
+     * 优先匹配的配置, 如果不存在 从 {@link #settings} 里获取
+     */
     private Settings lastSettingsApplied = Settings.EMPTY;
     private final List<SettingUpdater<?>> settingUpdaters = new CopyOnWriteArrayList<>();
     private final Map<String, Setting<?>> complexMatchers;
+    /**
+     * 配置的键值对信息
+     */
     private final Map<String, Setting<?>> keySettings;
+    /**
+     * 当前配置的作用域
+     */
     private final Setting.Property scope;
     private static final Pattern KEY_PATTERN = Pattern.compile("^(?:[-\\w]+[.])*[-\\w]+$");
     private static final Pattern GROUP_KEY_PATTERN = Pattern.compile("^(?:[-\\w]+[.])+$");
@@ -90,6 +100,11 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
         }
     }
 
+    /**
+     * @param nodeSettings  Node级别的配置
+     * @param scopeSettings Index级别的配置
+     * @param other         实际级别的配置
+     */
     protected AbstractScopedSettings(Settings nodeSettings, Settings scopeSettings, AbstractScopedSettings other) {
         super(nodeSettings);
         this.lastSettingsApplied = scopeSettings;
@@ -146,9 +161,10 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
      * Applies the given settings to all the settings consumers or to none of them. The settings
      * will be merged with the node settings before they are applied while given settings override existing node
      * settings.
+     *
      * @param newSettings the settings to apply
      * @return the unmerged applied settings
-    */
+     */
     public synchronized Settings applySettings(Settings newSettings) {
         if (lastSettingsApplied != null && newSettings.equals(lastSettingsApplied)) {
             // nothing changed in the settings, ignore
@@ -182,6 +198,7 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
      * <p>
      * Note: Only settings registered in {@link SettingsModule} can be changed dynamically.
      * </p>
+     *
      * @param validator an additional validator that is only applied to updates of this setting.
      *                  This is useful to add additional validation to settings at runtime compared to at startup time.
      */
@@ -206,7 +223,7 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
      * Adds a settings consumer for affix settings. Affix settings have a namespace associated to it that needs to be available to the
      * consumer in order to be processed correctly.
      */
-    public synchronized <T> void addAffixUpdateConsumer(Setting.AffixSetting<T> setting,  BiConsumer<String, T> consumer,
+    public synchronized <T> void addAffixUpdateConsumer(Setting.AffixSetting<T> setting, BiConsumer<String, T> consumer,
                                                         BiConsumer<String, T> validator) {
         final Setting<?> registeredSetting = this.complexMatchers.get(setting.getKey());
         if (setting != registeredSetting) {
@@ -220,8 +237,8 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
      * consumer in order to be processed correctly. This consumer will get a namespace to value map instead of each individual namespace
      * and value as in {@link #addAffixUpdateConsumer(Setting.AffixSetting, BiConsumer, BiConsumer)}
      */
-    public synchronized <T> void addAffixMapUpdateConsumer(Setting.AffixSetting<T> setting,  Consumer<Map<String, T>> consumer,
-                                                        BiConsumer<String, T> validator, boolean omitDefaults) {
+    public synchronized <T> void addAffixMapUpdateConsumer(Setting.AffixSetting<T> setting, Consumer<Map<String, T>> consumer,
+                                                           BiConsumer<String, T> validator, boolean omitDefaults) {
         final Setting<?> registeredSetting = this.complexMatchers.get(setting.getKey());
         if (setting != registeredSetting) {
             throw new IllegalArgumentException("Setting is not registered for key [" + setting.getKey() + "]");
@@ -238,7 +255,8 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
      * See {@link #addSettingsUpdateConsumer(Setting, Setting, BiConsumer, BiConsumer)} for details.
      */
     public synchronized <A, B> void addSettingsUpdateConsumer(Setting<A> a, Setting<B> b, BiConsumer<A, B> consumer) {
-        addSettingsUpdateConsumer(a, b, consumer, (i, j) -> {} );
+        addSettingsUpdateConsumer(a, b, consumer, (i, j) -> {
+        });
     }
 
     /**
@@ -268,7 +286,8 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
      * </p>
      */
     public synchronized <T> void addSettingsUpdateConsumer(Setting<T> setting, Consumer<T> consumer) {
-       addSettingsUpdateConsumer(setting, consumer, (s) -> {});
+        addSettingsUpdateConsumer(setting, consumer, (s) -> {
+        });
     }
 
     /**
@@ -292,10 +311,10 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
      * @see Setting#getSettingsDependencies(String)
      */
     public final void validate(
-            final Settings settings,
-            final boolean validateDependencies,
-            final boolean ignorePrivateSettings,
-            final boolean ignoreArchivedSettings) {
+        final Settings settings,
+        final boolean validateDependencies,
+        final boolean ignorePrivateSettings,
+        final boolean ignoreArchivedSettings) {
         final List<RuntimeException> exceptions = new ArrayList<>();
         for (final String key : settings.keySet()) { // settings iterate in deterministic fashion
             if (isPrivateSetting(key) && ignorePrivateSettings) {
@@ -327,7 +346,7 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
                     scoredKeys.add(new Tuple<>(distance, k));
                 }
             }
-            CollectionUtil.timSort(scoredKeys, (a,b) -> b.v1().compareTo(a.v1()));
+            CollectionUtil.timSort(scoredKeys, (a, b) -> b.v1().compareTo(a.v1()));
             String msgPrefix = "unknown setting";
             SecureSettings secureSettings = settings.getSecureSettings();
             if (secureSettings != null && settings.getSecureSettings().getSettingNames().contains(key)) {
@@ -336,13 +355,13 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
             String msg = msgPrefix + " [" + key + "]";
             List<String> keys = scoredKeys.stream().map((a) -> a.v2()).collect(Collectors.toList());
             if (keys.isEmpty() == false) {
-                msg += " did you mean " + (keys.size() == 1 ? "[" + keys.get(0) + "]": "any of " + keys.toString()) + "?";
+                msg += " did you mean " + (keys.size() == 1 ? "[" + keys.get(0) + "]" : "any of " + keys.toString()) + "?";
             } else {
                 msg += " please check that any required plugins are installed, or check the breaking changes documentation for removed " +
                     "settings";
             }
             throw new IllegalArgumentException(msg);
-        } else  {
+        } else {
             Set<String> settingsDependencies = setting.getSettingsDependencies(key);
             if (setting.hasComplexMatcher()) {
                 setting = setting.getConcreteSetting(key);
@@ -362,14 +381,16 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
 
     /**
      * Transactional interface to update settings.
-     * @see Setting
+     *
      * @param <T> the type of the value of the setting
+     * @see Setting
      */
     public interface SettingUpdater<T> {
 
         /**
          * Returns true if this updaters setting has changed with the current update
-         * @param current the current settings
+         *
+         * @param current  the current settings
          * @param previous the previous setting
          * @return true if this updaters setting has changed with the current update
          */
@@ -388,6 +409,7 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
 
         /**
          * Updates this updaters value if it has changed.
+         *
          * @return <code>true</code> iff the value has been updated.
          */
         default boolean apply(Settings current, Settings previous) {
@@ -407,9 +429,12 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
         default Runnable updater(Settings current, Settings previous) {
             if (hasChanged(current, previous)) {
                 T value = getValue(current, previous);
-                return () -> { apply(value, current, previous);};
+                return () -> {
+                    apply(value, current, previous);
+                };
             }
-            return () -> {};
+            return () -> {
+            };
         }
     }
 
@@ -420,18 +445,27 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
         Setting<?> raw = getRaw(key);
         if (raw == null) {
             return null;
-        } if (raw.hasComplexMatcher()) {
+        }
+        if (raw.hasComplexMatcher()) {
             return raw.getConcreteSetting(key);
         } else {
             return raw;
         }
     }
 
+    /**
+     * 获取原始的配置
+     *
+     * @param key
+     * @return
+     */
     private Setting<?> getRaw(String key) {
+        // 从键值对里获取
         Setting<?> setting = keySettings.get(key);
         if (setting != null) {
             return setting;
         }
+        // 从匹配规则里获取
         for (Map.Entry<String, Setting<?>> entry : complexMatchers.entrySet()) {
             if (entry.getValue().match(key)) {
                 assert assertMatcher(key, 1);
@@ -450,7 +484,7 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
             }
         }
         assert list.size() == numComplexMatchers : "Expected " + numComplexMatchers + " complex matchers to match key [" +
-            key + "] but got: "  + list.toString();
+            key + "] but got: " + list.toString();
         return true;
     }
 
@@ -494,9 +528,11 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
             throw new IllegalArgumentException("settings scope doesn't match the setting scope [" + this.scope + "] not in [" +
                 setting.getProperties() + "]");
         }
+        // 验证此 Setting 已经注册在当前的配置里。 Setting里面有key , 但没有值
         if (get(setting.getKey()) == null) {
             throw new IllegalArgumentException("setting " + setting.getKey() + " has not been registered");
         }
+        // 优先使用 lastSettingsApplied , 其次使用  settings
         return setting.get(this.lastSettingsApplied, settings);
     }
 
@@ -508,10 +544,10 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
      * </p>
      *
      * @param toApply the new settings to apply
-     * @param target the target settings builder that the updates are applied to. All keys that have explicit null value in toApply will be
-     *        removed from this builder
+     * @param target  the target settings builder that the updates are applied to. All keys that have explicit null value in toApply will be
+     *                removed from this builder
      * @param updates a settings builder that holds all updates applied to target
-     * @param type a free text string to allow better exceptions messages
+     * @param type    a free text string to allow better exceptions messages
      * @return <code>true</code> if the target has changed otherwise <code>false</code>
      */
     public boolean updateDynamicSettings(Settings toApply, Settings.Builder target, Settings.Builder updates, String type) {
@@ -522,10 +558,10 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
      * Updates a target settings builder with new, updated or deleted settings from a given settings builder.
      *
      * @param toApply the new settings to apply
-     * @param target the target settings builder that the updates are applied to. All keys that have explicit null value in toApply will be
-     *        removed from this builder
+     * @param target  the target settings builder that the updates are applied to. All keys that have explicit null value in toApply will be
+     *                removed from this builder
      * @param updates a settings builder that holds all updates applied to target
-     * @param type a free text string to allow better exceptions messages
+     * @param type    a free text string to allow better exceptions messages
      * @return <code>true</code> if the target has changed otherwise <code>false</code>
      */
     public boolean updateSettings(Settings toApply, Settings.Builder target, Settings.Builder updates, String type) {
@@ -545,13 +581,13 @@ public abstract class AbstractScopedSettings extends AbstractComponent {
     /**
      * Updates a target settings builder with new, updated or deleted settings from a given settings builder.
      *
-     * @param toApply the new settings to apply
-     * @param target the target settings builder that the updates are applied to. All keys that have explicit null value in toApply will be
-     *        removed from this builder
-     * @param updates a settings builder that holds all updates applied to target
-     * @param type a free text string to allow better exceptions messages
+     * @param toApply     the new settings to apply
+     * @param target      the target settings builder that the updates are applied to. All keys that have explicit null value in toApply will be
+     *                    removed from this builder
+     * @param updates     a settings builder that holds all updates applied to target
+     * @param type        a free text string to allow better exceptions messages
      * @param onlyDynamic if <code>false</code> all settings are updated otherwise only dynamic settings are updated. if set to
-     *        <code>true</code> and a non-dynamic setting is updated an exception is thrown.
+     *                    <code>true</code> and a non-dynamic setting is updated an exception is thrown.
      * @return <code>true</code> if the target has changed otherwise <code>false</code>
      */
     private boolean updateSettings(Settings toApply, Settings.Builder target, Settings.Builder updates, String type, boolean onlyDynamic) {

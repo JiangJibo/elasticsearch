@@ -40,6 +40,7 @@ import org.elasticsearch.transport.TransportService;
 
 /**
  * Performs the get operation.
+ * @see  org.elasticsearch.rest.action.document.RestGetAction
  */
 public class TransportGetAction extends TransportSingleShardAction<GetRequest, GetResponse> {
 
@@ -60,7 +61,7 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
     }
 
     /**
-     * 有哪些分片要执行
+     * 有哪个分片要执行查询
      *
      * @param state
      * @param request
@@ -86,8 +87,10 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
     @Override
     protected GetResponse shardOperation(GetRequest request, ShardId shardId) {
         IndexService indexService = indicesService.indexServiceSafe(shardId.getIndex());
+        // 获取索引分片
         IndexShard indexShard = indexService.getShard(shardId.id());
 
+        // 如果请求需要刷新且当前请求非实时的
         if (request.refresh() && !request.realtime()) {
             indexShard.refresh("refresh_flag_get");
         }

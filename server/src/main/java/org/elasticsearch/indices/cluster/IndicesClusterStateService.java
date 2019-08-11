@@ -107,7 +107,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
     private static final ShardStateAction.Listener SHARD_STATE_ACTION_LISTENER = new ShardStateAction.Listener() {
     };
 
-    // a list of shards that failed during recovery
+    // a list of shards that failed during recovery 恢复失败的索引分片信息
     // we keep track of these shards in order to prevent repeated recovery of these shards on each cluster state update
     final ConcurrentMap<ShardId, ShardRouting> failedShardsCache = ConcurrentCollections.newConcurrentMap();
     private final RepositoriesService repositoriesService;
@@ -218,20 +218,27 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
             return;
         }
 
+        // 事件更新恢复失败的索引分片
         updateFailedShardsCache(state);
 
-        deleteIndices(event); // also deletes shards of deleted indices
+        // 事件可能是删除是索引
+         deleteIndices(event); // also deletes shards of deleted indices
 
+        // 事件可能是移除不在分配此Node的索引, 但不会删除索引数据
         removeUnallocatedIndices(event); // also removes shards of removed indices
 
         failMissingShards(state);
 
+        // 事件可能是移除索引分片
         removeShards(state);   // removes any local shards that doesn't match what the master expects
 
+        // 事件可能是更新索引信息
         updateIndices(event); // can also fail shards, but these are then guaranteed to be in failedShardsCache
 
+        // 事件可能是创建索引
         createIndices(state);
 
+        // 事件可能是创建或者更新分片
         createOrUpdateShards(state);
     }
 
@@ -255,6 +262,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         for (Iterator<Map.Entry<ShardId, ShardRouting>> iterator = failedShardsCache.entrySet().iterator(); iterator.hasNext(); ) {
             ShardRouting failedShardRouting = iterator.next().getValue();
             ShardRouting matchedRouting = localRoutingNode.getByShardId(failedShardRouting.shardId());
+            // 如果
             if (matchedRouting == null || matchedRouting.isSameAllocation(failedShardRouting) == false) {
                 iterator.remove();
             } else {
@@ -278,6 +286,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         final String localNodeId = state.nodes().getLocalNodeId();
         assert localNodeId != null;
 
+        // 遍历那些要删除的索引
         for (Index index : event.indicesDeleted()) {
             if (logger.isDebugEnabled()) {
                 logger.debug("[{}] cleaning index, no longer part of the metadata", index);
@@ -286,6 +295,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
             final IndexSettings indexSettings;
             if (indexService != null) {
                 indexSettings = indexService.getIndexSettings();
+                // 删除索引
                 indicesService.removeIndex(index, DELETED, "index no longer part of the metadata");
             } else if (previousState.metaData().hasIndex(index.getName())) {
                 // The deleted index was part of the previous cluster state, but not loaded on the local node
@@ -404,18 +414,23 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
         assert localNodeId != null;
 
         // remove shards based on routing nodes (no deletion of data)
+        // 新的集群状态里关于此分片的路由
         RoutingNode localRoutingNode = state.getRoutingNodes().node(localNodeId);
         for (AllocatedIndex<? extends Shard> indexService : indicesService) {
             for (Shard shard : indexService) {
                 ShardRouting currentRoutingEntry = shard.routingEntry();
                 ShardId shardId = currentRoutingEntry.shardId();
+                // 新的分片路由
                 ShardRouting newShardRouting = localRoutingNode == null ? null : localRoutingNode.getByShardId(shardId);
+                // 如果分片路由为空, 则移除。分片是针对索引的
                 if (newShardRouting == null) {
                     // we can just remove the shard without cleaning it locally, since we will clean it in IndicesStore
                     // once all shards are allocated
                     logger.debug("{} removing shard (not allocated)", shardId);
                     indexService.removeShard(shardId.id(), "removing shard (not allocated)");
-                } else if (newShardRouting.isSameAllocation(currentRoutingEntry) == false) {
+                }
+                // 索引分片和以前不一样了
+                else if (newShardRouting.isSameAllocation(currentRoutingEntry) == false) {
                     logger.debug("{} removing shard (stale allocation id, stale {}, new {})", shardId,
                         currentRoutingEntry, newShardRouting);
                     indexService.removeShard(shardId.id(), "removing shard (stale copy)");
@@ -447,6 +462,7 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
             }
         }
 
+        // 遍历每个索引的元数据信息
         for (Map.Entry<Index, List<ShardRouting>> entry : indicesToCreate.entrySet()) {
             final Index index = entry.getKey();
             final IndexMetaData indexMetaData = state.metaData().index(index);
@@ -454,7 +470,9 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
 
             AllocatedIndex<? extends Shard> indexService = null;
             try {
+                // 创建索引
                 indexService = indicesService.createIndex(indexMetaData, buildInIndexListener);
+                // 如果是索引的mapping更新 %% 需要发送mapping refresh事件(默认true)
                 if (indexService.updateMapping(indexMetaData) && sendRefreshMapping) {
                     nodeMappingRefreshAction.nodeMappingRefresh(state.nodes().getMasterNode(),
                         new NodeMappingRefreshAction.NodeMappingRefreshRequest(indexMetaData.getIndex().getName(),
@@ -481,11 +499,15 @@ public class IndicesClusterStateService extends AbstractLifecycleComponent imple
             return;
         }
         final ClusterState state = event.state();
+        // 遍历所有索引
         for (AllocatedIndex<? extends Shard> indexService : indicesService) {
             final Index index = indexService.index();
+            // 当前索引元数据
             final IndexMetaData currentIndexMetaData = indexService.getIndexSettings().getIndexMetaData();
+            // 最新的索引元数据
             final IndexMetaData newIndexMetaData = state.metaData().index(index);
             assert newIndexMetaData != null : "index " + index + " should have been removed by deleteIndices";
+            // 元数据是否发生了变化
             if (ClusterChangedEvent.indexMetaDataChanged(currentIndexMetaData, newIndexMetaData)) {
                 indexService.updateMetaData(newIndexMetaData);
                 try {

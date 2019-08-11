@@ -153,6 +153,9 @@ public class IndicesService extends AbstractLifecycleComponent
     private final TimeValue shardsClosedTimeout;
     private final AnalysisRegistry analysisRegistry;
     private final IndexNameExpressionResolver indexNameExpressionResolver;
+    /**
+     * 索引级别的配置
+     */
     private final IndexScopedSettings indexScopedSettings;
     private final IndicesFieldDataCache indicesFieldDataCache;
     private final CacheCleaner cacheCleaner;
@@ -378,6 +381,7 @@ public class IndicesService extends AbstractLifecycleComponent
     }
 
     /**
+     * 创建一个索引
      * Creates a new {@link IndexService} for the given metadata.
      *
      * @param indexMetaData    the index metadata to create the index for
@@ -386,12 +390,12 @@ public class IndicesService extends AbstractLifecycleComponent
      * @throws ResourceAlreadyExistsException if the index already exists.
      */
     @Override
-    public synchronized IndexService createIndex(
-        final IndexMetaData indexMetaData, final List<IndexEventListener> builtInListeners) throws IOException {
+    public synchronized IndexService createIndex(final IndexMetaData indexMetaData, final List<IndexEventListener> builtInListeners) throws IOException {
         ensureChangesAllowed();
         if (indexMetaData.getIndexUUID().equals(IndexMetaData.INDEX_UUID_NA_VALUE)) {
             throw new IllegalArgumentException("index must have a real UUID found value: [" + indexMetaData.getIndexUUID() + "]");
         }
+        // 索引
         final Index index = indexMetaData.getIndex();
         if (hasIndex(index)) {
             throw new ResourceAlreadyExistsException(index);
@@ -405,14 +409,8 @@ public class IndicesService extends AbstractLifecycleComponent
         };
         finalListeners.add(onStoreClose);
         finalListeners.add(oldShardsStats);
-        final IndexService indexService =
-            createIndexService(
-                "create index",
-                indexMetaData,
-                indicesQueryCache,
-                indicesFieldDataCache,
-                finalListeners,
-                indexingMemoryController);
+        // 创建索引服务
+        final IndexService indexService = createIndexService("create index", indexMetaData, indicesQueryCache, indicesFieldDataCache, finalListeners, indexingMemoryController);
         boolean success = false;
         try {
             indexService.getIndexEventListener().afterIndexCreated(indexService);
@@ -426,7 +424,7 @@ public class IndicesService extends AbstractLifecycleComponent
         }
     }
 
-    /**
+    /** 创建一个索引但是没有注册
      * This creates a new IndexService without registering it
      */
     private synchronized IndexService createIndexService(final String reason,
@@ -435,6 +433,7 @@ public class IndicesService extends AbstractLifecycleComponent
                                                          IndicesFieldDataCache indicesFieldDataCache,
                                                          List<IndexEventListener> builtInListeners,
                                                          IndexingOperationListener... indexingOperationListeners) throws IOException {
+        // 索引 setting
         final IndexSettings idxSettings = new IndexSettings(indexMetaData, this.settings, indexScopedSettings);
         // we ignore private settings since they are not registered settings
         indexScopedSettings.validate(indexMetaData.getSettings(), true, true, true);
@@ -444,14 +443,17 @@ public class IndicesService extends AbstractLifecycleComponent
             idxSettings.getNumberOfReplicas(),
             reason);
 
+        // 索引模块, 指定分词器
         final IndexModule indexModule = new IndexModule(idxSettings, analysisRegistry);
         for (IndexingOperationListener operationListener : indexingOperationListeners) {
             indexModule.addIndexOperationListener(operationListener);
         }
+        // 通过插件插入索引级别的自定义拓展
         pluginsService.onIndexModule(indexModule);
         for (IndexEventListener listener : builtInListeners) {
             indexModule.addIndexEventListener(listener);
         }
+        // 创建索引
         return indexModule.newIndexService(
             nodeEnv,
             xContentRegistry,
@@ -565,18 +567,21 @@ public class IndicesService extends AbstractLifecycleComponent
                 Map<String, IndexService> newIndices = new HashMap<>(indices);
                 indexService = newIndices.remove(index.getUUID());
                 assert indexService != null : "IndexService is null for index: " + index;
+                // 更新当前节点的索引集合
                 indices = unmodifiableMap(newIndices);
                 listener = indexService.getIndexEventListener();
             }
 
             listener.beforeIndexRemoved(indexService, reason);
             logger.debug("{} closing index service (reason [{}][{}])", index, reason, extraInfo);
+            // 关闭索引服务
             indexService.close(extraInfo, reason == IndexRemovalReason.DELETED);
             logger.debug("{} closed... (reason [{}][{}])", index, reason, extraInfo);
             final IndexSettings indexSettings = indexService.getIndexSettings();
             listener.afterIndexRemoved(indexService.index(), indexSettings, reason);
             if (reason == IndexRemovalReason.DELETED) {
                 // now we are done - try to wipe data on disk if possible
+                // 删除索引在磁盘的数据
                 deleteIndexStore(extraInfo, indexService.index(), indexSettings);
             }
         } catch (Exception e) {

@@ -178,6 +178,11 @@ public final class IndexScopedSettings extends AbstractScopedSettings {
         super(settings, metaData.getSettings(), other);
     }
 
+    /**
+     * @param settings
+     * @param metaData
+     * @return
+     */
     public IndexScopedSettings copy(Settings settings, IndexMetaData metaData) {
         return new IndexScopedSettings(settings, this, metaData);
     }

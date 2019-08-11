@@ -264,6 +264,7 @@ public class InternalEngine extends Engine {
      */
     @SuppressForbidden(reason = "reference counting is required here")
     private static final class ExternalSearcherManager extends ReferenceManager<IndexSearcher> {
+
         private final SearcherFactory searcherFactory;
         // 内部持有一个 SearcherManager
         private final SearcherManager internalSearcherManager;
@@ -458,7 +459,7 @@ public class InternalEngine extends Engine {
     }
 
     private Translog openTranslog(EngineConfig engineConfig, TranslogDeletionPolicy translogDeletionPolicy,
-        LongSupplier globalCheckpointSupplier) throws IOException {
+                                  LongSupplier globalCheckpointSupplier) throws IOException {
         final TranslogConfig translogConfig = engineConfig.getTranslogConfig();
         final String translogUUID = loadTranslogUUIDFromLastCommit();
         // A translog checkpoint from 5.x index does not have translog_generation_key and Translog's ctor will read
@@ -1137,6 +1138,7 @@ public class InternalEngine extends Engine {
     }
 
     private static final class IndexingStrategy {
+
         final boolean currentNotFoundOrDeleted;
         final boolean useLuceneUpdateDocument;
         final long seqNoForIndexing;
@@ -1145,8 +1147,8 @@ public class InternalEngine extends Engine {
         final Optional<IndexResult> earlyResultOnPreFlightError;
 
         private IndexingStrategy(boolean currentNotFoundOrDeleted, boolean useLuceneUpdateDocument,
-            boolean indexIntoLucene, long seqNoForIndexing,
-            long versionForIndexing, IndexResult earlyResultOnPreFlightError) {
+                                 boolean indexIntoLucene, long seqNoForIndexing,
+                                 long versionForIndexing, IndexResult earlyResultOnPreFlightError) {
             assert useLuceneUpdateDocument == false || indexIntoLucene :
                 "use lucene update is set to true, but we're not indexing into lucene";
             assert (indexIntoLucene && earlyResultOnPreFlightError != null) == false :
@@ -1175,7 +1177,7 @@ public class InternalEngine extends Engine {
         }
 
         static IndexingStrategy processNormally(boolean currentNotFoundOrDeleted,
-            long seqNoForIndexing, long versionForIndexing) {
+                                                long seqNoForIndexing, long versionForIndexing) {
             return new IndexingStrategy(currentNotFoundOrDeleted, currentNotFoundOrDeleted == false,
                 true, seqNoForIndexing, versionForIndexing, null);
         }
@@ -1186,7 +1188,7 @@ public class InternalEngine extends Engine {
         }
 
         static IndexingStrategy processButSkipLucene(boolean currentNotFoundOrDeleted,
-            long seqNoForIndexing, long versionForIndexing) {
+                                                     long seqNoForIndexing, long versionForIndexing) {
             return new IndexingStrategy(currentNotFoundOrDeleted, false,
                 false, seqNoForIndexing, versionForIndexing, null);
         }
@@ -1382,6 +1384,7 @@ public class InternalEngine extends Engine {
     }
 
     private static final class DeletionStrategy {
+
         // of a rare double delete
         final boolean deleteFromLucene;
         final boolean currentlyDeleted;
@@ -1390,8 +1393,8 @@ public class InternalEngine extends Engine {
         final Optional<DeleteResult> earlyResultOnPreflightError;
 
         private DeletionStrategy(boolean deleteFromLucene, boolean currentlyDeleted,
-            long seqNoOfDeletion, long versionOfDeletion,
-            DeleteResult earlyResultOnPreflightError) {
+                                 long seqNoOfDeletion, long versionOfDeletion,
+                                 DeleteResult earlyResultOnPreflightError) {
             assert (deleteFromLucene && earlyResultOnPreflightError != null) == false :
                 "can only delete from lucene or have a preflight result but not both." +
                     "deleteFromLucene: " + deleteFromLucene
@@ -1413,13 +1416,13 @@ public class InternalEngine extends Engine {
         }
 
         static DeletionStrategy processNormally(boolean currentlyDeleted, long seqNoOfDeletion,
-            long versionOfDeletion) {
+                                                long versionOfDeletion) {
             return new DeletionStrategy(true, currentlyDeleted, seqNoOfDeletion, versionOfDeletion, null);
 
         }
 
         public static DeletionStrategy processButSkipLucene(boolean currentlyDeleted, long seqNoOfDeletion,
-            long versionOfDeletion) {
+                                                            long versionOfDeletion) {
             return new DeletionStrategy(false, currentlyDeleted, seqNoOfDeletion, versionOfDeletion, null);
         }
     }
@@ -1635,11 +1638,26 @@ public class InternalEngine extends Engine {
             || localCheckpointTracker.getCheckpoint() == localCheckpointTracker.getMaxSeqNo();
     }
 
+    /**
+     * 索引刷盘
+     *
+     * @return
+     * @throws EngineException
+     */
     @Override
     public CommitId flush() throws EngineException {
         return flush(false, false);
     }
 
+    /**
+     * 刷盘
+     *
+     * @param force         if <code>true</code> a lucene commit is executed even if no changes need to be committed. 强制刷盘,即使美哦与索引数据修改
+     * @param waitIfOngoing if <code>true</code> this call will block until all currently running flushes have finished.
+     *                      Otherwise this call will return without blocking.
+     * @return
+     * @throws EngineException
+     */
     @Override
     public CommitId flush(boolean force, boolean waitIfOngoing) throws EngineException {
         ensureOpen();
@@ -1816,7 +1834,7 @@ public class InternalEngine extends Engine {
 
     @Override
     public void forceMerge(final boolean flush, int maxNumSegments, boolean onlyExpungeDeletes,
-        final boolean upgrade, final boolean upgradeOnlyAncientSegments) throws EngineException, IOException {
+                           final boolean upgrade, final boolean upgradeOnlyAncientSegments) throws EngineException, IOException {
         /*
          * We do NOT acquire the readlock here since we are waiting on the merges to finish
          * that's fine since the IW.rollback should stop all the threads and trigger an IOException
@@ -2136,6 +2154,7 @@ public class InternalEngine extends Engine {
      * Extended SearcherFactory that warms the segments if needed when acquiring a new searcher
      */
     static final class SearchFactory extends EngineSearcherFactory {
+
         private final Engine.Warmer warmer;
         private final Logger logger;
         private final AtomicBoolean isEngineClosed;
@@ -2208,7 +2227,11 @@ public class InternalEngine extends Engine {
         return indexWriter.getConfig();
     }
 
+    /**
+     * 存储引擎Merge定时处理器
+     */
     private final class EngineMergeScheduler extends ElasticsearchConcurrentMergeScheduler {
+
         private final AtomicInteger numMergesInFlight = new AtomicInteger(0);
         private final AtomicBoolean isThrottling = new AtomicBoolean();
 

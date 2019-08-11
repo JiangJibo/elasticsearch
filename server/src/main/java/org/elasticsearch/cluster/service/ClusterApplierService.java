@@ -502,6 +502,7 @@ public class ClusterApplierService extends AbstractLifecycleComponent implements
         }
 
         logger.debug("apply cluster state with version {}", newClusterState.version());
+        //
         callClusterStateAppliers(clusterChangedEvent);
 
         nodeConnectionsService.disconnectFromNodesExcept(newClusterState.nodes());

@@ -46,7 +46,13 @@ public class Index implements Writeable, ToXContentObject {
         INDEX_PARSER.declareString(Builder::uuid, new ParseField(INDEX_UUID_KEY));
     }
 
+    /**
+     * 索引名称
+     */
     private final String name;
+    /**
+     * 索引uuid
+     */
     private final String uuid;
 
     public Index(String name, String uuid) {
