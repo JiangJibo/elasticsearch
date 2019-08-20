@@ -41,7 +41,9 @@ import org.apache.lucene.util.BytesRefBuilder;
 import org.apache.lucene.util.InPlaceMergeSorter;
 import org.apache.lucene.util.IntroSorter;
 
-/** Collections-related utility methods. */
+/**
+ * Collections-related utility methods.
+ */
 public class CollectionUtils {
 
     public static void sort(final long[] array, int len) {
@@ -138,7 +140,6 @@ public class CollectionUtils {
      * Checks if the given array contains any elements.
      *
      * @param array The array to check
-     *
      * @return false if the array contains an element, true if not or the array is null.
      */
     public static boolean isEmpty(Object[] array) {
@@ -146,6 +147,7 @@ public class CollectionUtils {
     }
 
     /**
+     * 返回一个旋转列表, distance 是起始点, 也就是从这个位置开始循环获取元素
      * Return a rotated view of the given list with the given distance.
      */
     public static <T> List<T> rotate(final List<T> list, int distance) {
@@ -237,17 +239,18 @@ public class CollectionUtils {
             return null;
         }
         if (value instanceof Map) {
-            return ((Map<?,?>) value).values();
+            return ((Map<?, ?>)value).values();
         } else if ((value instanceof Iterable) && (value instanceof Path == false)) {
-            return (Iterable<?>) value;
+            return (Iterable<?>)value;
         } else if (value instanceof Object[]) {
-            return Arrays.asList((Object[]) value);
+            return Arrays.asList((Object[])value);
         } else {
             return null;
         }
     }
 
-    private static void ensureNoSelfReferences(final Iterable<?> value, Object originalReference, final Set<Object> ancestors) {
+    private static void ensureNoSelfReferences(final Iterable<?> value, Object originalReference,
+        final Set<Object> ancestors) {
         if (value != null) {
             if (ancestors.add(originalReference) == false) {
                 throw new IllegalArgumentException("Iterable object is self-referencing itself");
@@ -259,6 +262,11 @@ public class CollectionUtils {
         }
     }
 
+    /**
+     * 旋转列表
+     *
+     * @param <T>
+     */
     private static class RotatedList<T> extends AbstractList<T> implements RandomAccess {
 
         private final List<T> in;
@@ -289,18 +297,23 @@ public class CollectionUtils {
             return in.size();
         }
 
-    };
+    }
+
+    ;
+
     public static void sort(final BytesRefArray bytes, final int[] indices) {
         sort(new BytesRefBuilder(), new BytesRefBuilder(), bytes, indices);
     }
 
-    private static void sort(final BytesRefBuilder scratch, final BytesRefBuilder scratch1, final BytesRefArray bytes, final int[] indices) {
+    private static void sort(final BytesRefBuilder scratch, final BytesRefBuilder scratch1, final BytesRefArray bytes,
+        final int[] indices) {
 
         final int numValues = bytes.size();
         assert indices.length >= numValues;
         if (numValues > 1) {
             new InPlaceMergeSorter() {
                 final Comparator<BytesRef> comparator = Comparator.naturalOrder();
+
                 @Override
                 protected int compare(int i, int j) {
                     return comparator.compare(bytes.get(scratch, indices[i]), bytes.get(scratch1, indices[j]));
@@ -375,7 +388,7 @@ public class CollectionUtils {
         return list;
     }
 
-    public static<E> ArrayList<E> asArrayList(E first, E second, E... other) {
+    public static <E> ArrayList<E> asArrayList(E first, E second, E... other) {
         if (other == null) {
             throw new NullPointerException("other");
         }
@@ -408,7 +421,7 @@ public class CollectionUtils {
         if (size <= 0) {
             throw new IllegalArgumentException("size <= 0");
         }
-        List<List<E>> result = new ArrayList<>((int) Math.ceil(list.size() / size));
+        List<List<E>> result = new ArrayList<>((int)Math.ceil(list.size() / size));
 
         List<E> accumulator = new ArrayList<>(size);
         int count = 0;

@@ -35,6 +35,17 @@ import java.util.List;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
+/**
+ * 分析请求, 查看ES如何对查询参数做分词
+ *
+ * 使用哪个索引的哪个Field的映射来分词
+ * http://localhost:9200/lanboal/_analyze POST
+ * {
+ *   "field": "text",
+ *   "analyzer": "standard",
+ *   "text": "Eating an apple a day keeps doctor away"
+ * }
+ */
 public class RestAnalyzeAction extends BaseRestHandler {
 
     public static class Fields {

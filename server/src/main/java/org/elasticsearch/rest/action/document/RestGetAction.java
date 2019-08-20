@@ -42,7 +42,8 @@ import static org.elasticsearch.rest.RestStatus.NOT_FOUND;
 import static org.elasticsearch.rest.RestStatus.OK;
 
 /**
- * @see  TransportGetAction
+ * 处理逻辑见
+ * @see TransportGetAction
  */
 public class RestGetAction extends BaseRestHandler {
 
@@ -70,10 +71,10 @@ public class RestGetAction extends BaseRestHandler {
         final GetRequest getRequest = new GetRequest(request.param("index"), request.param("type"), request.param("id"));
         // 在读取前是否要刷新, 默认false
         getRequest.refresh(request.paramAsBoolean("refresh", getRequest.refresh()));
-        // 是否制定了路由
+        // 是否制定了路由, 请求发送到集群的哪个shard, 每个shard包含一个Primary和若干个Replica
         getRequest.routing(request.param("routing"));
         getRequest.parent(request.param("parent"));
-        // 优先选择哪个节点, "_local":当前节点;  "_primary":主节点
+        // 优先选择哪个节点, "_local":当前节点;  "_primary":主节点。 请求指向shard里的Primary还是哪个Replica
         getRequest.preference(request.param("preference"));
         // 是否实时, 默认true
         getRequest.realtime(request.paramAsBoolean("realtime", getRequest.realtime()));

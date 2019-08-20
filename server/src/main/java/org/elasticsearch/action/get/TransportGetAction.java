@@ -61,7 +61,7 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
     }
 
     /**
-     * 有哪个分片要执行查询
+     * 将查询发送的那个Shard执行
      *
      * @param state
      * @param request

@@ -39,6 +39,9 @@ import java.io.IOException;
 
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 
+/**
+ * 文档更新请求
+ */
 public class RestUpdateAction extends BaseRestHandler {
     private static final DeprecationLogger DEPRECATION_LOGGER =
         new DeprecationLogger(Loggers.getLogger(RestUpdateAction.class));
@@ -55,11 +58,16 @@ public class RestUpdateAction extends BaseRestHandler {
 
     @Override
     public RestChannelConsumer prepareRequest(final RestRequest request, final NodeClient client) throws IOException {
+        // 文档三要素的索引，类型，id
         UpdateRequest updateRequest = new UpdateRequest(request.param("index"), request.param("type"), request.param("id"));
+        // 路由
         updateRequest.routing(request.param("routing"));
         updateRequest.parent(request.param("parent"));
+        // 超时时间
         updateRequest.timeout(request.paramAsTime("timeout", updateRequest.timeout()));
+        // 是否刷新
         updateRequest.setRefreshPolicy(request.param("refresh"));
+        // 要等几个可用的分片恢复
         String waitForActiveShards = request.param("wait_for_active_shards");
         if (waitForActiveShards != null) {
             updateRequest.waitForActiveShards(ActiveShardCount.parseString(waitForActiveShards));

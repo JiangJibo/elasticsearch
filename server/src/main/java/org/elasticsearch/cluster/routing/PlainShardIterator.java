@@ -24,6 +24,7 @@ import org.elasticsearch.index.shard.ShardId;
 import java.util.List;
 
 /**
+ * 简单的分片遍历器
  * The {@link PlainShardIterator} is a {@link ShardsIterator} which iterates all
  * shards or a given {@link ShardId shard id}
  */
@@ -50,9 +51,9 @@ public class PlainShardIterator extends PlainShardsIterator implements ShardIter
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        ShardIterator that = (ShardIterator) o;
+        if (this == o) { return true; }
+        if (o == null || getClass() != o.getClass()) { return false; }
+        ShardIterator that = (ShardIterator)o;
         return shardId.equals(that.shardId());
     }
 

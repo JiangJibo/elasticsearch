@@ -19,8 +19,14 @@
 
 package org.elasticsearch.rest.action.search;
 
-import org.apache.lucene.util.BytesRef;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Set;
+import java.util.function.IntConsumer;
+
 import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.TransportSearchAction;
 import org.elasticsearch.action.support.IndicesOptions;
 import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.Strings;
@@ -41,17 +47,14 @@ import org.elasticsearch.search.sort.SortOrder;
 import org.elasticsearch.search.suggest.SuggestBuilder;
 import org.elasticsearch.search.suggest.term.TermSuggestionBuilder.SuggestMode;
 
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Set;
-import java.util.function.IntConsumer;
-
 import static org.elasticsearch.common.unit.TimeValue.parseTimeValue;
 import static org.elasticsearch.rest.RestRequest.Method.GET;
 import static org.elasticsearch.rest.RestRequest.Method.POST;
 import static org.elasticsearch.search.suggest.SuggestBuilders.termSuggestion;
 
+/**
+ * @see TransportSearchAction
+ */
 public class RestSearchAction extends BaseRestHandler {
 
     public static final String TYPED_KEYS_PARAM = "typed_keys";
@@ -87,35 +90,42 @@ public class RestSearchAction extends BaseRestHandler {
          * be null later. If that is confusing to you then you are in good
          * company.
          */
+        // 要查询的条数, 默认10
         IntConsumer setSize = size -> searchRequest.source().size(size);
-        request.withContentOrSourceParamParserOrNull(parser ->
-            parseSearchRequest(searchRequest, request, parser, setSize));
+        // 解析请求body和参数
+        request.withContentOrSourceParamParserOrNull(
+            parser -> parseSearchRequest(searchRequest, request, parser, setSize));
 
         return channel -> client.search(searchRequest, new RestStatusToXContentListener<>(channel));
     }
 
     /**
-     * Parses the rest request on top of the SearchRequest, preserving values that are not overridden by the rest request.
+     * Parses the rest request on top of the SearchRequest, preserving values that are not overridden by the rest
+     * request.
      *
-     * @param requestContentParser body of the request to read. This method does not attempt to read the body from the {@code request}
-     *        parameter
-     * @param setSize how the size url parameter is handled. {@code udpate_by_query} and regular search differ here.
+     * @param requestContentParser body of the request to read. This method does not attempt to read the body from the
+     *                             {@code request}
+     *                             parameter
+     * @param setSize              how the size url parameter is handled. {@code udpate_by_query} and regular search
+     *                             differ here.
      */
     public static void parseSearchRequest(SearchRequest searchRequest, RestRequest request,
-                                          XContentParser requestContentParser,
-                                          IntConsumer setSize) throws IOException {
+        XContentParser requestContentParser, IntConsumer setSize) throws IOException {
 
         if (searchRequest.source() == null) {
             searchRequest.source(new SearchSourceBuilder());
         }
+        // 指定要查询哪几个索引, 可用逗号分隔指定多个, 比如 index=a,b
         searchRequest.indices(Strings.splitStringByCommaToArray(request.param("index")));
         if (requestContentParser != null) {
+            // 解析请求的Body
             searchRequest.source().parseXContent(requestContentParser, true);
         }
 
         final int batchedReduceSize = request.paramAsInt("batched_reduce_size", searchRequest.getBatchedReduceSize());
         searchRequest.setBatchedReduceSize(batchedReduceSize);
-        searchRequest.setPreFilterShardSize(request.paramAsInt("pre_filter_shard_size", searchRequest.getPreFilterShardSize()));
+        searchRequest.setPreFilterShardSize(
+            request.paramAsInt("pre_filter_shard_size", searchRequest.getPreFilterShardSize()));
 
         if (request.hasParam("max_concurrent_shard_requests")) {
             // only set if we have the parameter since we auto adjust the max concurrency on the coordinator
@@ -135,56 +145,65 @@ public class RestSearchAction extends BaseRestHandler {
         // not be specified explicitly by the user.
         String searchType = request.param("search_type");
         if ("query_and_fetch".equals(searchType) ||
-                "dfs_query_and_fetch".equals(searchType)) {
+            "dfs_query_and_fetch".equals(searchType)) {
             throw new IllegalArgumentException("Unsupported search type [" + searchType + "]");
         } else {
             searchRequest.searchType(searchType);
         }
+        // 将请求参数填入SearchSourceBuilder
         parseSearchSource(searchRequest.source(), request, setSize);
         searchRequest.requestCache(request.paramAsBoolean("request_cache", null));
 
         String scroll = request.param("scroll");
         if (scroll != null) {
+            // 如果是滚屏查询, 设置滚屏开启时间。  scroll=1m , 保持滚屏开启1分钟
             searchRequest.scroll(new Scroll(parseTimeValue(scroll, null, "scroll")));
         }
 
         searchRequest.types(Strings.splitStringByCommaToArray(request.param("type")));
+        // 分片路由
         searchRequest.routing(request.param("routing"));
+        // 分片内(primary,replicas)的偏好
         searchRequest.preference(request.param("preference"));
         searchRequest.indicesOptions(IndicesOptions.fromRequest(request, searchRequest.indicesOptions()));
     }
 
     /**
+     * 将request请求上的参数填充到SearchSource里
      * Parses the rest request on top of the SearchSourceBuilder, preserving
      * values that are not overridden by the rest request.
      */
-    private static void parseSearchSource(final SearchSourceBuilder searchSourceBuilder, RestRequest request, IntConsumer setSize) {
+    private static void parseSearchSource(final SearchSourceBuilder searchSourceBuilder, RestRequest request,
+        IntConsumer setSize) {
         QueryBuilder queryBuilder = RestActions.urlParamsToQueryBuilder(request);
         if (queryBuilder != null) {
             searchSourceBuilder.query(queryBuilder);
         }
-
+        // from
         int from = request.paramAsInt("from", -1);
         if (from != -1) {
             searchSourceBuilder.from(from);
         }
+
+        // size
         int size = request.paramAsInt("size", -1);
         if (size != -1) {
             setSize.accept(size);
         }
-
+        // 搜索的详细相关性详细信息
         if (request.hasParam("explain")) {
             searchSourceBuilder.explain(request.paramAsBoolean("explain", null));
         }
         if (request.hasParam("version")) {
             searchSourceBuilder.version(request.paramAsBoolean("version", null));
         }
+        // 超时设置
         if (request.hasParam("timeout")) {
             searchSourceBuilder.timeout(request.paramAsTime("timeout", null));
         }
         if (request.hasParam("terminate_after")) {
             int terminateAfter = request.paramAsInt("terminate_after",
-                    SearchContext.DEFAULT_TERMINATE_AFTER);
+                SearchContext.DEFAULT_TERMINATE_AFTER);
             if (terminateAfter < 0) {
                 throw new IllegalArgumentException("terminateAfter must be > 0");
             } else if (terminateAfter > 0) {
@@ -218,7 +237,7 @@ public class RestSearchAction extends BaseRestHandler {
         if (request.hasParam("track_total_hits")) {
             searchSourceBuilder.trackTotalHits(request.paramAsBoolean("track_total_hits", true));
         }
-
+        // 排序
         String sSorts = request.param("sort");
         if (sSorts != null) {
             String[] sorts = Strings.splitStringByCommaToArray(sSorts);
@@ -249,9 +268,9 @@ public class RestSearchAction extends BaseRestHandler {
             int suggestSize = request.paramAsInt("suggest_size", 5);
             String suggestMode = request.param("suggest_mode");
             searchSourceBuilder.suggest(new SuggestBuilder().addSuggestion(suggestField,
-                    termSuggestion(suggestField)
-                        .text(suggestText).size(suggestSize)
-                        .suggestMode(SuggestMode.resolve(suggestMode))));
+                termSuggestion(suggestField)
+                    .text(suggestText).size(suggestSize)
+                    .suggestMode(SuggestMode.resolve(suggestMode))));
         }
     }
 

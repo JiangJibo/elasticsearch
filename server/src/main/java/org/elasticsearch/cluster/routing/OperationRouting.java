@@ -51,15 +51,21 @@ public class OperationRouting extends AbstractComponent {
             Setting.Property.Dynamic, Setting.Property.NodeScope);
 
     private List<String> awarenessAttributes;
+    /**
+     * 是否使用自适应的备份分片选择，默认false
+     */
     private boolean useAdaptiveReplicaSelection;
 
     public OperationRouting(Settings settings, ClusterSettings clusterSettings) {
         super(settings);
-        this.awarenessAttributes = AwarenessAllocationDecider.CLUSTER_ROUTING_ALLOCATION_AWARENESS_ATTRIBUTE_SETTING.get(settings);
+        this.awarenessAttributes = AwarenessAllocationDecider.CLUSTER_ROUTING_ALLOCATION_AWARENESS_ATTRIBUTE_SETTING
+            .get(settings);
         this.useAdaptiveReplicaSelection = USE_ADAPTIVE_REPLICA_SELECTION_SETTING.get(settings);
-        clusterSettings.addSettingsUpdateConsumer(AwarenessAllocationDecider.CLUSTER_ROUTING_ALLOCATION_AWARENESS_ATTRIBUTE_SETTING,
+        clusterSettings.addSettingsUpdateConsumer(
+            AwarenessAllocationDecider.CLUSTER_ROUTING_ALLOCATION_AWARENESS_ATTRIBUTE_SETTING,
             this::setAwarenessAttributes);
-        clusterSettings.addSettingsUpdateConsumer(USE_ADAPTIVE_REPLICA_SELECTION_SETTING, this::setUseAdaptiveReplicaSelection);
+        clusterSettings.addSettingsUpdateConsumer(USE_ADAPTIVE_REPLICA_SELECTION_SETTING,
+            this::setUseAdaptiveReplicaSelection);
     }
 
     void setUseAdaptiveReplicaSelection(boolean useAdaptiveReplicaSelection) {
@@ -83,29 +89,44 @@ public class OperationRouting extends AbstractComponent {
         return shards(clusterState, index, id, routing).shardsIt();
     }
 
-    public ShardIterator getShards(ClusterState clusterState, String index, String id, @Nullable String routing, @Nullable String preference) {
-        return preferenceActiveShardIterator(shards(clusterState, index, id, routing), clusterState.nodes().getLocalNodeId(), clusterState.nodes(), preference,
-            null, null);
+    /**
+     * 获取分片迭代器，就是有哪些分片会用到
+     *
+     * @param clusterState
+     * @param index
+     * @param id
+     * @param routing
+     * @param preference
+     * @return
+     */
+    public ShardIterator getShards(ClusterState clusterState, String index, String id, @Nullable String routing,
+        @Nullable String preference) {
+
+        // 提取路由指定的分片
+        IndexShardRoutingTable routingTable = shards(clusterState, index, id, routing);
+
+        return preferenceActiveShardIterator(routingTable, clusterState.nodes().getLocalNodeId(), clusterState.nodes(), preference, null, null);
     }
 
     public ShardIterator getShards(ClusterState clusterState, String index, int shardId, @Nullable String preference) {
         final IndexShardRoutingTable indexShard = clusterState.getRoutingTable().shardRoutingTable(index, shardId);
-        return preferenceActiveShardIterator(indexShard, clusterState.nodes().getLocalNodeId(), clusterState.nodes(), preference, null, null);
+        return preferenceActiveShardIterator(indexShard, clusterState.nodes().getLocalNodeId(), clusterState.nodes(),
+            preference, null, null);
     }
 
     public GroupShardsIterator<ShardIterator> searchShards(ClusterState clusterState,
-                                                           String[] concreteIndices,
-                                                           @Nullable Map<String, Set<String>> routing,
-                                                           @Nullable String preference) {
+        String[] concreteIndices,
+        @Nullable Map<String, Set<String>> routing,
+        @Nullable String preference) {
         return searchShards(clusterState, concreteIndices, routing, preference, null, null);
     }
 
     public GroupShardsIterator<ShardIterator> searchShards(ClusterState clusterState,
-                                                           String[] concreteIndices,
-                                                           @Nullable Map<String, Set<String>> routing,
-                                                           @Nullable String preference,
-                                                           @Nullable ResponseCollectorService collectorService,
-                                                           @Nullable Map<String, Long> nodeCounts) {
+        String[] concreteIndices,
+        @Nullable Map<String, Set<String>> routing,
+        @Nullable String preference,
+        @Nullable ResponseCollectorService collectorService,
+        @Nullable Map<String, Long> nodeCounts) {
         final Set<IndexShardRoutingTable> shards = computeTargetedShards(clusterState, concreteIndices, routing);
         final Set<ShardIterator> set = new HashSet<>(shards.size());
         for (IndexShardRoutingTable shard : shards) {
@@ -120,7 +141,8 @@ public class OperationRouting extends AbstractComponent {
 
     private static final Map<String, Set<String>> EMPTY_ROUTING = Collections.emptyMap();
 
-    private Set<IndexShardRoutingTable> computeTargetedShards(ClusterState clusterState, String[] concreteIndices, @Nullable Map<String, Set<String>> routing) {
+    private Set<IndexShardRoutingTable> computeTargetedShards(ClusterState clusterState, String[] concreteIndices,
+        @Nullable Map<String, Set<String>> routing) {
         routing = routing == null ? EMPTY_ROUTING : routing; // just use an empty map
         final Set<IndexShardRoutingTable> set = new HashSet<>();
         // we use set here and not list since we might get duplicates
@@ -132,7 +154,8 @@ public class OperationRouting extends AbstractComponent {
                 for (String r : effectiveRouting) {
                     final int routingPartitionSize = indexMetaData.getRoutingPartitionSize();
                     for (int partitionOffset = 0; partitionOffset < routingPartitionSize; partitionOffset++) {
-                        set.add(shardRoutingTable(indexRouting, calculateScaledShardId(indexMetaData, r, partitionOffset)));
+                        set.add(
+                            shardRoutingTable(indexRouting, calculateScaledShardId(indexMetaData, r, partitionOffset)));
                     }
                 }
             } else {
@@ -145,53 +168,68 @@ public class OperationRouting extends AbstractComponent {
     }
 
     /**
-     * @param indexShard
-     * @param localNodeId
-     * @param nodes
-     * @param preference
+     * 处理preference 指定的分片
+     *
+     * @param indexShard       路由指定的分片, 一个分片可能包含一个primary和多个replica
+     * @param localNodeId      本地节点id
+     * @param nodes            所有节点
+     * @param preference       偏好
      * @param collectorService
      * @param nodeCounts
      * @return
      */
     private ShardIterator preferenceActiveShardIterator(IndexShardRoutingTable indexShard, String localNodeId,
-                                                        DiscoveryNodes nodes, @Nullable String preference,
-                                                        @Nullable ResponseCollectorService collectorService,
-                                                        @Nullable Map<String, Long> nodeCounts) {
+        DiscoveryNodes nodes, @Nullable String preference,
+        @Nullable ResponseCollectorService collectorService, @Nullable Map<String, Long> nodeCounts) {
+
+        // 如果沒有指定preference
         if (preference == null || preference.isEmpty()) {
             if (awarenessAttributes.isEmpty()) {
+                // 默认false
                 if (useAdaptiveReplicaSelection) {
                     return indexShard.activeInitializingShardsRankedIt(collectorService, nodeCounts);
                 } else {
+                    // 返回一个简单的循环遍历的分片列表, 遍历起点每次+1, 到末位重置成起点
                     return indexShard.activeInitializingShardsRandomIt();
                 }
             } else {
                 return indexShard.preferAttributesActiveInitializingShardsIt(awarenessAttributes, nodes);
             }
         }
+        // 如果preference 以 '_' 起始
         if (preference.charAt(0) == '_') {
+            // _prefer_nodes:1 , 取冒号前的字符串来确定是哪个类型
             Preference preferenceType = Preference.parse(preference);
+
+            // 先查看是否制定哪个分片, 如果指定分片，那么后续就是在此分片内部指定Primary或者那个Replica
+            // 比如 preference=_shards:1,2|_replica
             if (preferenceType == Preference.SHARDS) {
                 // starts with _shards, so execute on specific ones
                 int index = preference.indexOf('|');
 
                 String shards;
+                // _shards:1
                 if (index == -1) {
                     shards = preference.substring(Preference.SHARDS.type().length() + 1);
-                } else {
+                }
+                // _shards:1,2|_replica 优先取1,2
+                else {
                     shards = preference.substring(Preference.SHARDS.type().length() + 1, index);
                 }
                 String[] ids = Strings.splitStringByCommaToArray(shards);
                 boolean found = false;
                 for (String id : ids) {
+                    // 如果preference 指定的分片在 routing 指定分片集合(primary, replicas) 内, 则找到指定节点
                     if (Integer.parseInt(id) == indexShard.shardId().id()) {
                         found = true;
                         break;
                     }
                 }
+                // 如果指定的Shard的 序号 不存在此索引分片集合(primary,replicas)中
                 if (!found) {
                     return null;
                 }
-                // no more preference
+                // no more preference,  _shards:| ,未指定哪个shard
                 if (index == -1 || index == preference.length() - 1) {
                     if (awarenessAttributes.isEmpty()) {
                         if (useAdaptiveReplicaSelection) {
@@ -203,10 +241,11 @@ public class OperationRouting extends AbstractComponent {
                         return indexShard.preferAttributesActiveInitializingShardsIt(awarenessAttributes, nodes);
                     }
                 } else {
-                    // update the preference and continue
+                    // update the preference and continue, 截取 _shards:1,2|3  后面的3, 也可能是 _shards:1,2|_replica
                     preference = preference.substring(index + 1);
                 }
             }
+
             preferenceType = Preference.parse(preference);
             switch (preferenceType) {
                 case PREFER_NODES:
@@ -214,35 +253,51 @@ public class OperationRouting extends AbstractComponent {
                         Arrays.stream(
                             preference.substring(Preference.PREFER_NODES.type().length() + 1).split(",")
                         ).collect(Collectors.toSet());
+                    // 优先此Node里的此索引下的Shard, 如果不存在那么也可用其他Node下的Shard
                     return indexShard.preferNodeActiveInitializingShardsIt(nodesIds);
+
                 case LOCAL:
+                    // 和上面类似,优先在当前Node上执行，如果当前Node没有此Shard, 那么可用其他的Node
                     return indexShard.preferNodeActiveInitializingShardsIt(Collections.singleton(localNodeId));
+
                 case PRIMARY:
-                    deprecationLogger.deprecated("[_primary] has been deprecated in 6.1+, and will be removed in 7.0; " +
-                        "use [_only_nodes] or [_prefer_nodes]");
+                    deprecationLogger.deprecated(
+                        "[_primary] has been deprecated in 6.1+, and will be removed in 7.0; " +
+                            "use [_only_nodes] or [_prefer_nodes]");
+                    // 主分片
                     return indexShard.primaryActiveInitializingShardIt();
+
                 case REPLICA:
-                    deprecationLogger.deprecated("[_replica] has been deprecated in 6.1+, and will be removed in 7.0; " +
-                        "use [_only_nodes] or [_prefer_nodes]");
+                    deprecationLogger.deprecated(
+                        "[_replica] has been deprecated in 6.1+, and will be removed in 7.0; " +
+                            "use [_only_nodes] or [_prefer_nodes]");
                     return indexShard.replicaActiveInitializingShardIt();
+
                 case PRIMARY_FIRST:
-                    deprecationLogger.deprecated("[_primary_first] has been deprecated in 6.1+, and will be removed in 7.0; " +
-                        "use [_only_nodes] or [_prefer_nodes]");
+                    deprecationLogger.deprecated(
+                        "[_primary_first] has been deprecated in 6.1+, and will be removed in 7.0; " +
+                            "use [_only_nodes] or [_prefer_nodes]");
                     return indexShard.primaryFirstActiveInitializingShardsIt();
+
                 case REPLICA_FIRST:
-                    deprecationLogger.deprecated("[_replica_first] has been deprecated in 6.1+, and will be removed in 7.0; " +
-                        "use [_only_nodes] or [_prefer_nodes]");
+                    deprecationLogger.deprecated(
+                        "[_replica_first] has been deprecated in 6.1+, and will be removed in 7.0; " +
+                            "use [_only_nodes] or [_prefer_nodes]");
                     return indexShard.replicaFirstActiveInitializingShardsIt();
+
                 case ONLY_LOCAL:
+                    // 仅在当前Node执行, 如果当前Node不存在此Index 的 Shard, 那么返回空集合
                     return indexShard.onlyNodeActiveInitializingShardsIt(localNodeId);
+
                 case ONLY_NODES:
                     String nodeAttributes = preference.substring(Preference.ONLY_NODES.type().length() + 1);
+                    // 仅在指定的Node上执行, 如果那个Node上不存在Shard, 抛出异常
                     return indexShard.onlyNodeSelectorActiveInitializingShardsIt(nodeAttributes.split(","), nodes);
                 default:
                     throw new IllegalArgumentException("unknown preference [" + preferenceType + "]");
             }
         }
-        // if not, then use it as the index
+        // if not, then use it as the index 如果 preference 不是以 "_" 开头
         int routingHash = Murmur3HashFunction.hash(preference);
         if (nodes.getMinNodeVersion().onOrAfter(Version.V_6_0_0_alpha1)) {
             // The AllocationService lists shards in a fixed order based on nodes
@@ -254,6 +309,7 @@ public class OperationRouting extends AbstractComponent {
             routingHash = 31 * routingHash + indexShard.shardId.hashCode();
         }
         if (awarenessAttributes.isEmpty()) {
+            // 取指定Shard下从指定个位置开始的集合, 也就是preference值相同，每次都从同一个Node开始
             return indexShard.activeInitializingShardsIt(routingHash);
         } else {
             return indexShard.preferAttributesActiveInitializingShardsIt(awarenessAttributes, nodes, routingHash);
@@ -285,16 +341,16 @@ public class OperationRouting extends AbstractComponent {
     }
 
     /**
-     * 找到分片路由列表
+     * 获取指定索引的路由列表
      *
      * @param clusterState
      * @param index
-     * @param id
-     * @param routing
+     * @param id           请求id
+     * @param routing      路由规则
      * @return
      */
     protected IndexShardRoutingTable shards(ClusterState clusterState, String index, String id, String routing) {
-        // 获取分片ID
+        // 获取分片ID, 优先使用routing 的hash来确定, routing 不存在的话用requestId
         int shardId = generateShardId(indexMetaData(clusterState, index), id, routing);
         // 返回指定分片
         return clusterState.getRoutingTable().shardRoutingTable(index, shardId);
@@ -318,14 +374,15 @@ public class OperationRouting extends AbstractComponent {
         final int partitionOffset;
 
         if (routing == null) {
-            assert (indexMetaData.isRoutingPartitionedIndex() == false) : "A routing value is required for gets from a partitioned index";
+            assert (indexMetaData.isRoutingPartitionedIndex() == false)
+                : "A routing value is required for gets from a partitioned index";
             effectiveRouting = id;
         } else {
             effectiveRouting = routing;
         }
         // 如果可路由的分区数量 != 1
         if (indexMetaData.isRoutingPartitionedIndex()) {
-            // Math.floorMod == % 分片的偏移量
+            // partitionOffset == hash(id) % partitionSize
             partitionOffset = Math.floorMod(Murmur3HashFunction.hash(id), indexMetaData.getRoutingPartitionSize());
         } else {
             // we would have still got 0 above but this check just saves us an unnecessary hash calculation
@@ -343,7 +400,8 @@ public class OperationRouting extends AbstractComponent {
      * @param partitionOffset
      * @return
      */
-    private static int calculateScaledShardId(IndexMetaData indexMetaData, String effectiveRouting, int partitionOffset) {
+    private static int calculateScaledShardId(IndexMetaData indexMetaData, String effectiveRouting,
+        int partitionOffset) {
         final int hash = Murmur3HashFunction.hash(effectiveRouting) + partitionOffset;
 
         // we don't use IMD#getNumberOfShards since the index might have been shrunk such that we need to use the size
