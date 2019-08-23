@@ -19,12 +19,11 @@
 
 package org.elasticsearch.action.admin.indices.flush;
 
-import org.elasticsearch.action.ActionRequest;
+import java.io.IOException;
+
 import org.elasticsearch.action.support.broadcast.BroadcastRequest;
 import org.elasticsearch.common.io.stream.StreamInput;
 import org.elasticsearch.common.io.stream.StreamOutput;
-
-import java.io.IOException;
 
 /**
  * A flush request to flush one or more indices. The flush process of an index basically frees memory from the index

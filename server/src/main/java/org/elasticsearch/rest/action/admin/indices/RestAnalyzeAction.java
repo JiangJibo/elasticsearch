@@ -41,19 +41,73 @@ import static org.elasticsearch.rest.RestRequest.Method.POST;
  * 使用哪个索引的哪个Field的映射来分词
  * http://localhost:9200/lanboal/_analyze POST
  * {
- *   "field": "text",
- *   "analyzer": "standard",
- *   "text": "Eating an apple a day keeps doctor away"
+ * "field": "text",
+ * "analyzer": "standard",
+ * "text": "Eating an apple a day keeps doctor away"
  * }
+ *
+ * settings配置, 含有索引里可能用到的一些信息，比如多个分析器, 索引内不同的field可以使用不同的分析器
+ * {
+ *     "settings": {
+ *         "analysis": {
+ *             "char_filter": {
+ *                 "&_to_and": {
+ *                     "type":       "mapping",
+ *                     "mappings": [ "&=> and "]
+ *             }},
+ *             "filter": {
+ *                 "my_stopwords": {
+ *                     "type":       "stop",
+ *                     "stopwords": [ "the", "a" ]
+ *             }},
+ *             "analyzer": {
+ *                 "my_analyzer": {
+ *                     "type":         "custom",
+ *                     "char_filter":  [ "html_strip", "&_to_and" ],
+ *                     "tokenizer":    "standard",
+ *                     "filter":       [ "lowercase", "my_stopwords" ]
+ *             }}
+ * }}}
+ *
+ * 请求解析：http://localhost:9200/my_index/_analyze  POST
+ *
+ * {
+ * 	"analyzer": "my_analyzer",
+ * 	"text":"The quick & brown fox"
+ * }
+ *
+ * 使用分析器： http://localhost:9200/my_index/_mapping/my_type  PUT
+ *
+ * {
+ *     "properties": {
+ *         "title": {
+ *             "type":      "string",
+ *             "analyzer":  "my_analyzer"
+ *         }
+ *     }
+ * }
+ *
  */
 public class RestAnalyzeAction extends BaseRestHandler {
 
     public static class Fields {
+        /**
+         * 分析器, 先执行字符过滤器(注意是字符, 不是词, 主要是处理字符的)char_filter, 然后分词tokenizer, 最后过滤filter,主要是处理词的
+         */
         public static final ParseField ANALYZER = new ParseField("analyzer");
         public static final ParseField TEXT = new ParseField("text");
         public static final ParseField FIELD = new ParseField("field");
+        /**
+         * 分词器
+         */
         public static final ParseField TOKENIZER = new ParseField("tokenizer");
+        /**
+         * 标记过滤器, 比如去除停顿词, 大小写转换, 词根转换
+         */
         public static final ParseField TOKEN_FILTERS = new ParseField("filter");
+        /**
+         * 字符过滤器, 比如 & => and 转换
+         */
         public static final ParseField CHAR_FILTERS = new ParseField("char_filter");
         public static final ParseField EXPLAIN = new ParseField("explain");
         public static final ParseField ATTRIBUTES = new ParseField("attributes");
@@ -88,7 +142,7 @@ public class RestAnalyzeAction extends BaseRestHandler {
     }
 
     static void buildFromContent(XContentParser parser, AnalyzeRequest analyzeRequest)
-            throws IOException {
+        throws IOException {
         if (parser.nextToken() != XContentParser.Token.START_OBJECT) {
             throw new IllegalArgumentException("Malformed content, must start with an object");
         } else {
@@ -105,13 +159,14 @@ public class RestAnalyzeAction extends BaseRestHandler {
                     List<String> texts = new ArrayList<>();
                     while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
                         if (token.isValue() == false) {
-                            throw new IllegalArgumentException(currentFieldName + " array element should only contain text");
+                            throw new IllegalArgumentException(
+                                currentFieldName + " array element should only contain text");
                         }
                         texts.add(parser.text());
                     }
                     analyzeRequest.text(texts.toArray(new String[texts.size()]));
                 } else if (Fields.ANALYZER.match(currentFieldName, parser.getDeprecationHandler())
-                        && token == XContentParser.Token.VALUE_STRING) {
+                    && token == XContentParser.Token.VALUE_STRING) {
                     analyzeRequest.analyzer(parser.text());
                 } else if (Fields.FIELD.match(currentFieldName, parser.getDeprecationHandler()) &&
                     token == XContentParser.Token.VALUE_STRING) {
@@ -125,7 +180,7 @@ public class RestAnalyzeAction extends BaseRestHandler {
                         throw new IllegalArgumentException(currentFieldName + " should be tokenizer's name or setting");
                     }
                 } else if (Fields.TOKEN_FILTERS.match(currentFieldName, parser.getDeprecationHandler())
-                        && token == XContentParser.Token.START_ARRAY) {
+                    && token == XContentParser.Token.START_ARRAY) {
                     while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
                         if (token == XContentParser.Token.VALUE_STRING) {
                             analyzeRequest.addTokenFilter(parser.text());
@@ -133,11 +188,11 @@ public class RestAnalyzeAction extends BaseRestHandler {
                             analyzeRequest.addTokenFilter(parser.map());
                         } else {
                             throw new IllegalArgumentException(currentFieldName
-                                    + " array element should contain filter's name or setting");
+                                + " array element should contain filter's name or setting");
                         }
                     }
                 } else if (Fields.CHAR_FILTERS.match(currentFieldName, parser.getDeprecationHandler())
-                        && token == XContentParser.Token.START_ARRAY) {
+                    && token == XContentParser.Token.START_ARRAY) {
                     while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
                         if (token == XContentParser.Token.VALUE_STRING) {
                             analyzeRequest.addCharFilter(parser.text());
@@ -145,7 +200,7 @@ public class RestAnalyzeAction extends BaseRestHandler {
                             analyzeRequest.addCharFilter(parser.map());
                         } else {
                             throw new IllegalArgumentException(currentFieldName
-                                    + " array element should contain char filter's name or setting");
+                                + " array element should contain char filter's name or setting");
                         }
                     }
                 } else if (Fields.EXPLAIN.match(currentFieldName, parser.getDeprecationHandler())) {
@@ -159,7 +214,8 @@ public class RestAnalyzeAction extends BaseRestHandler {
                     List<String> attributes = new ArrayList<>();
                     while ((token = parser.nextToken()) != XContentParser.Token.END_ARRAY) {
                         if (token.isValue() == false) {
-                            throw new IllegalArgumentException(currentFieldName + " array element should only contain attribute name");
+                            throw new IllegalArgumentException(
+                                currentFieldName + " array element should only contain attribute name");
                         }
                         attributes.add(parser.text());
                     }
@@ -172,7 +228,7 @@ public class RestAnalyzeAction extends BaseRestHandler {
                     }
                 } else {
                     throw new IllegalArgumentException("Unknown parameter ["
-                            + currentFieldName + "] in request body or parameter is of the wrong type[" + token + "] ");
+                        + currentFieldName + "] in request body or parameter is of the wrong type[" + token + "] ");
                 }
             }
         }

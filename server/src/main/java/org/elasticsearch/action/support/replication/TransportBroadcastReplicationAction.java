@@ -22,6 +22,8 @@ package org.elasticsearch.action.support.replication;
 import com.carrotsearch.hppc.cursors.IntObjectCursor;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.action.admin.indices.flush.TransportFlushAction;
+import org.elasticsearch.action.admin.indices.refresh.TransportRefreshAction;
 import org.elasticsearch.action.support.ActionFilters;
 import org.elasticsearch.action.support.DefaultShardOperationFailedException;
 import org.elasticsearch.action.support.HandledTransportAction;
@@ -48,23 +50,31 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 
 /**
+ * 需要传播到Replica的请求的父Action
  * Base class for requests that should be executed on all shards of an index or several indices.
- * This action sends shard requests to all primary shards of the indices and they are then replicated like write requests
+ * This action sends shard requests to all primary shards of the indices and they are then replicated like write
+ * requests
+ *
+ * @see TransportRefreshAction
+ * @see TransportFlushAction
  */
-public abstract class TransportBroadcastReplicationAction<Request extends BroadcastRequest<Request>, Response extends BroadcastResponse, ShardRequest extends ReplicationRequest<ShardRequest>, ShardResponse extends ReplicationResponse>
-        extends HandledTransportAction<Request, Response> {
+public abstract class TransportBroadcastReplicationAction<Request extends BroadcastRequest<Request>,
+    Response extends BroadcastResponse, ShardRequest extends ReplicationRequest<ShardRequest>,
+    ShardResponse extends ReplicationResponse>
+    extends HandledTransportAction<Request, Response> {
 
     private final TransportReplicationAction replicatedBroadcastShardAction;
     private final ClusterService clusterService;
 
-    public TransportBroadcastReplicationAction(String name, Supplier<Request> request, Settings settings, ThreadPool threadPool, ClusterService clusterService,
-                                               TransportService transportService,
-                                               ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver, TransportReplicationAction replicatedBroadcastShardAction) {
+    public TransportBroadcastReplicationAction(String name, Supplier<Request> request, Settings settings,
+        ThreadPool threadPool, ClusterService clusterService,
+        TransportService transportService,
+        ActionFilters actionFilters, IndexNameExpressionResolver indexNameExpressionResolver,
+        TransportReplicationAction replicatedBroadcastShardAction) {
         super(settings, name, threadPool, transportService, actionFilters, indexNameExpressionResolver, request);
         this.replicatedBroadcastShardAction = replicatedBroadcastShardAction;
         this.clusterService = clusterService;
     }
-
 
     @Override
     protected final void doExecute(final Request request, final ActionListener<Response> listener) {
@@ -80,6 +90,7 @@ public abstract class TransportBroadcastReplicationAction<Request extends Broadc
             finishAndNotifyListener(listener, shardsResponses);
         }
         final CountDown responsesCountDown = new CountDown(shards.size());
+        // 向每个分片发送请求, 可能是refresh或者flush
         for (final ShardId shardId : shards) {
             ActionListener<ShardResponse> shardActionListener = new ActionListener<ShardResponse>() {
                 @Override
@@ -94,13 +105,15 @@ public abstract class TransportBroadcastReplicationAction<Request extends Broadc
                 @Override
                 public void onFailure(Exception e) {
                     logger.trace("{}: got failure from {}", actionName, shardId);
-                    int totalNumCopies = clusterState.getMetaData().getIndexSafe(shardId.getIndex()).getNumberOfReplicas() + 1;
+                    int totalNumCopies = clusterState.getMetaData().getIndexSafe(shardId.getIndex())
+                        .getNumberOfReplicas() + 1;
                     ShardResponse shardResponse = newShardResponse();
                     ReplicationResponse.ShardInfo.Failure[] failures;
                     if (TransportActions.isShardNotAvailableException(e)) {
                         failures = new ReplicationResponse.ShardInfo.Failure[0];
                     } else {
-                        ReplicationResponse.ShardInfo.Failure failure = new ReplicationResponse.ShardInfo.Failure(shardId, null, e, ExceptionsHelper.status(e), true);
+                        ReplicationResponse.ShardInfo.Failure failure = new ReplicationResponse.ShardInfo.Failure(
+                            shardId, null, e, ExceptionsHelper.status(e), true);
                         failures = new ReplicationResponse.ShardInfo.Failure[totalNumCopies];
                         Arrays.fill(failures, failure);
                     }
@@ -111,11 +124,22 @@ public abstract class TransportBroadcastReplicationAction<Request extends Broadc
                     }
                 }
             };
+            // 执行分片发送请求
             shardExecute(task, request, shardId, shardActionListener);
         }
     }
 
-    protected void shardExecute(Task task, Request request, ShardId shardId, ActionListener<ShardResponse> shardActionListener) {
+    /**
+     * 执行分片操作
+     *
+     * @param task
+     * @param request
+     * @param shardId
+     * @param shardActionListener
+     */
+    protected void shardExecute(Task task, Request request, ShardId shardId,
+        ActionListener<ShardResponse> shardActionListener) {
+        // 分片请求,是refresh或者flush
         ShardRequest shardRequest = newShardRequest(request, shardId);
         shardRequest.setParentTask(clusterService.localNode().getId(), task.getId());
         replicatedBroadcastShardAction.execute(shardRequest, shardActionListener);
@@ -130,7 +154,8 @@ public abstract class TransportBroadcastReplicationAction<Request extends Broadc
         for (String index : concreteIndices) {
             IndexMetaData indexMetaData = clusterState.metaData().getIndices().get(index);
             if (indexMetaData != null) {
-                for (IntObjectCursor<IndexShardRoutingTable> shardRouting : clusterState.getRoutingTable().indicesRouting().get(index).getShards()) {
+                for (IntObjectCursor<IndexShardRoutingTable> shardRouting : clusterState.getRoutingTable()
+                    .indicesRouting().get(index).getShards()) {
                     shardIds.add(shardRouting.value.shardId());
                 }
             }
@@ -160,7 +185,8 @@ public abstract class TransportBroadcastReplicationAction<Request extends Broadc
                     shardFailures = new ArrayList<>();
                 }
                 for (ReplicationResponse.ShardInfo.Failure failure : shardResponse.getShardInfo().getFailures()) {
-                    shardFailures.add(new DefaultShardOperationFailedException(new BroadcastShardOperationFailedException(failure.fullShardId(), failure.getCause())));
+                    shardFailures.add(new DefaultShardOperationFailedException(
+                        new BroadcastShardOperationFailedException(failure.fullShardId(), failure.getCause())));
                 }
             }
         }
@@ -168,5 +194,5 @@ public abstract class TransportBroadcastReplicationAction<Request extends Broadc
     }
 
     protected abstract BroadcastResponse newResponse(int successfulShards, int failedShards, int totalNumCopies,
-                                                     List<DefaultShardOperationFailedException> shardFailures);
+        List<DefaultShardOperationFailedException> shardFailures);
 }
