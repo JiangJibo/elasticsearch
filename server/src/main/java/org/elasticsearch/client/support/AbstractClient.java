@@ -360,7 +360,7 @@ public abstract class AbstractClient extends AbstractComponent implements Client
 
     private final ThreadPool threadPool;
     /**
-     *  持有 {@link IndicesAdmin} 和 {@link ClusterAdmin}
+     * 持有 {@link IndicesAdmin} 和 {@link ClusterAdmin}
      */
     private final Admin admin;
     private final ThreadedActionListener.Wrapper threadedWrapper;
@@ -408,7 +408,8 @@ public abstract class AbstractClient extends AbstractComponent implements Client
      */
     @Override
     public final <Request extends ActionRequest, Response extends ActionResponse, RequestBuilder extends ActionRequestBuilder<Request, Response,
-        RequestBuilder>> void execute( Action<Request, Response, RequestBuilder> action, Request request, ActionListener<Response> listener) {
+        RequestBuilder>> void execute(Action<Request, Response, RequestBuilder> action, Request request, ActionListener<Response> listener) {
+
         listener = threadedWrapper.wrap(listener);
         doExecute(action, request, listener);
     }
@@ -502,6 +503,12 @@ public abstract class AbstractClient extends AbstractComponent implements Client
         return execute(GetAction.INSTANCE, request);
     }
 
+    /**
+     * get doc
+     *
+     * @param request  The get request
+     * @param listener A listener to be notified with a result
+     */
     @Override
     public void get(final GetRequest request, final ActionListener<GetResponse> listener) {
         execute(GetAction.INSTANCE, request, listener);
