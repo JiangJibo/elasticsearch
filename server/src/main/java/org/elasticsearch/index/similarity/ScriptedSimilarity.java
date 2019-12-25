@@ -19,6 +19,8 @@
 
 package org.elasticsearch.index.similarity;
 
+import java.io.IOException;
+
 import org.apache.lucene.index.FieldInvertState;
 import org.apache.lucene.index.LeafReaderContext;
 import org.apache.lucene.index.NumericDocValues;
@@ -31,8 +33,6 @@ import org.apache.lucene.util.SmallFloat;
 import org.elasticsearch.script.SimilarityScript;
 import org.elasticsearch.script.SimilarityWeightScript;
 
-import java.io.IOException;
-
 /**
  * A {@link Similarity} implementation that allows scores to be scripted.
  */
@@ -42,11 +42,16 @@ public final class ScriptedSimilarity extends Similarity {
     final String scriptSource;
     final SimilarityWeightScript.Factory weightScriptFactory;
     final SimilarityScript.Factory scriptFactory;
+    /**
+     * 计算长度加权因子时，是否对内容去重,默认false
+     */
     final boolean discountOverlaps;
 
-    /** Sole constructor. */
+    /**
+     * Sole constructor.
+     */
     public ScriptedSimilarity(String weightScriptString, SimilarityWeightScript.Factory weightScriptFactory,
-            String scriptString, SimilarityScript.Factory scriptFactory, boolean discountOverlaps) {
+        String scriptString, SimilarityScript.Factory scriptFactory, boolean discountOverlaps) {
         this.weightScriptSource = weightScriptString;
         this.weightScriptFactory = weightScriptFactory;
         this.scriptSource = scriptString;
@@ -56,11 +61,19 @@ public final class ScriptedSimilarity extends Similarity {
 
     @Override
     public String toString() {
-        return getClass().getSimpleName() + "(weightScript=[" + weightScriptSource + "], script=[" + scriptSource + "])";
+        return getClass().getSimpleName() + "(weightScript=[" + weightScriptSource + "], script=[" + scriptSource
+            + "])";
     }
 
+    /**
+     * 计算属性的长度标准因子, 也就是标准化长度
+     *
+     * @param state
+     * @return
+     */
     @Override
     public long computeNorm(FieldInvertState state) {
+        // 如果去重, 则总长度- 重复词个数(positionIncrement == 0)
         final int numTerms = discountOverlaps ? state.getLength() - state.getNumOverlap() : state.getLength();
         return SmallFloat.intToByte4(numTerms);
     }
@@ -80,7 +93,9 @@ public final class ScriptedSimilarity extends Similarity {
         return new Weight(collectionStats.field(), query, field, terms);
     }
 
-    /** Compute the part of the score that does not depend on the current document using the init_script. */
+    /**
+     * Compute the part of the score that does not depend on the current document using the init_script.
+     */
     private double computeWeight(Query query, Field field, Term term) throws IOException {
         if (weightScriptFactory == null) {
             return 1d;
@@ -91,7 +106,7 @@ public final class ScriptedSimilarity extends Similarity {
 
     @Override
     public SimScorer simScorer(SimWeight w, LeafReaderContext context) throws IOException {
-        Weight weight = (Weight) w;
+        Weight weight = (Weight)w;
         SimScorer[] scorers = new SimScorer[weight.terms.length];
         for (int i = 0; i < weight.terms.length; ++i) {
             final Term term = weight.terms[i];
@@ -105,7 +120,7 @@ public final class ScriptedSimilarity extends Similarity {
                 public float score(int docID, float freq) throws IOException {
                     doc.docID = docID;
                     doc.freq = freq;
-                    return (float) script.execute(scoreWeight, weight.query, weight.field, term, doc);
+                    return (float)script.execute(scoreWeight, weight.query, weight.field, term, doc);
                 }
 
                 @Override
@@ -124,15 +139,15 @@ public final class ScriptedSimilarity extends Similarity {
                     float score = score(docID, freq.getValue());
                     return Explanation.match(score, "score from " + ScriptedSimilarity.this.toString() +
                             " computed from:",
-                            Explanation.match((float) scoreWeight, "weight"),
-                            Explanation.match(weight.query.boost, "query.boost"),
-                            Explanation.match(weight.field.docCount, "field.docCount"),
-                            Explanation.match(weight.field.sumDocFreq, "field.sumDocFreq"),
-                            Explanation.match(weight.field.sumTotalTermFreq, "field.sumTotalTermFreq"),
-                            Explanation.match(term.docFreq, "term.docFreq"),
-                            Explanation.match(term.totalTermFreq, "term.totalTermFreq"),
-                            Explanation.match(freq.getValue(), "doc.freq", freq.getDetails()),
-                            Explanation.match(doc.getLength(), "doc.length"));
+                        Explanation.match((float)scoreWeight, "weight"),
+                        Explanation.match(weight.query.boost, "query.boost"),
+                        Explanation.match(weight.field.docCount, "field.docCount"),
+                        Explanation.match(weight.field.sumDocFreq, "field.sumDocFreq"),
+                        Explanation.match(weight.field.sumTotalTermFreq, "field.sumTotalTermFreq"),
+                        Explanation.match(term.docFreq, "term.docFreq"),
+                        Explanation.match(term.totalTermFreq, "term.totalTermFreq"),
+                        Explanation.match(freq.getValue(), "doc.freq", freq.getDetails()),
+                        Explanation.match(doc.getLength(), "doc.length"));
                 }
             };
         }
@@ -148,7 +163,7 @@ public final class ScriptedSimilarity extends Similarity {
                     for (SimScorer scorer : scorers) {
                         sum += scorer.score(doc, freq);
                     }
-                    return (float) sum;
+                    return (float)sum;
                 }
 
                 @Override
@@ -187,7 +202,9 @@ public final class ScriptedSimilarity extends Similarity {
         }
     }
 
-    /** Scoring factors that come from the query. */
+    /**
+     * Scoring factors that come from the query.
+     */
     public static class Query {
         private final float boost;
 
@@ -195,13 +212,17 @@ public final class ScriptedSimilarity extends Similarity {
             this.boost = boost;
         }
 
-        /** The boost of the query. It should typically be incorporated into the score as a multiplicative factor. */
+        /**
+         * The boost of the query. It should typically be incorporated into the score as a multiplicative factor.
+         */
         public float getBoost() {
             return boost;
         }
     }
 
-    /** Statistics that are specific to a given field. */
+    /**
+     * Statistics that are specific to a given field.
+     */
     public static class Field {
         private final long docCount;
         private final long sumDocFreq;
@@ -213,25 +234,33 @@ public final class ScriptedSimilarity extends Similarity {
             this.sumTotalTermFreq = sumTotalTermFreq;
         }
 
-        /** Return the number of documents that have a value for this field. */
+        /**
+         * Return the number of documents that have a value for this field.
+         */
         public long getDocCount() {
             return docCount;
         }
 
-        /** Return the sum of {@link Term#getDocFreq()} for all terms that exist in this field,
-         *  or {@code -1} if this statistic is not available. */
+        /**
+         * Return the sum of {@link Term#getDocFreq()} for all terms that exist in this field,
+         * or {@code -1} if this statistic is not available.
+         */
         public long getSumDocFreq() {
             return sumDocFreq;
         }
 
-        /** Return the sum of {@link Term#getTotalTermFreq()} for all terms that exist in this field,
-         *  or {@code -1} if this statistic is not available. */
+        /**
+         * Return the sum of {@link Term#getTotalTermFreq()} for all terms that exist in this field,
+         * or {@code -1} if this statistic is not available.
+         */
         public long getSumTotalTermFreq() {
             return sumTotalTermFreq;
         }
     }
 
-    /** Statistics that are specific to a given term. */
+    /**
+     * Statistics that are specific to a given term.
+     */
     public static class Term {
         private final long docFreq;
         private final long totalTermFreq;
@@ -241,18 +270,25 @@ public final class ScriptedSimilarity extends Similarity {
             this.totalTermFreq = totalTermFreq;
         }
 
-        /** Return the number of documents that contain this term in the index. */
+        /**
+         * Return the number of documents that contain this term in the index.
+         */
         public long getDocFreq() {
             return docFreq;
         }
 
-        /** Return the total number of occurrences of this term in the index, or {@code -1} if this statistic is not available. */
+        /**
+         * Return the total number of occurrences of this term in the index, or {@code -1} if this statistic is not
+         * available.
+         */
         public long getTotalTermFreq() {
             return totalTermFreq;
         }
     }
 
-    /** Statistics that are specific to a document. */
+    /**
+     * Statistics that are specific to a document.
+     */
     public static class Doc {
         private final NumericDocValues norms;
         private int docID;
@@ -262,20 +298,24 @@ public final class ScriptedSimilarity extends Similarity {
             this.norms = norms;
         }
 
-        /** Return the number of tokens that the current document has in the considered field. */
+        /**
+         * Return the number of tokens that the current document has in the considered field.
+         */
         public int getLength() throws IOException {
             // the length is computed lazily so that similarities that do not use the length are
             // not penalized
             if (norms == null) {
                 return 1;
             } else if (norms.advanceExact(docID)) {
-                return SmallFloat.byte4ToInt((byte) norms.longValue());
+                return SmallFloat.byte4ToInt((byte)norms.longValue());
             } else {
                 return 0;
             }
         }
 
-        /** Return the number of occurrences of the term in the current document for the considered field. */
+        /**
+         * Return the number of occurrences of the term in the current document for the considered field.
+         */
         public float getFreq() {
             return freq;
         }

@@ -382,7 +382,7 @@ public class OperationRouting extends AbstractComponent {
         }
         // 如果可路由的分区数量 != 1
         if (indexMetaData.isRoutingPartitionedIndex()) {
-            // partitionOffset == hash(id) % partitionSize
+            // partitionOffset == hash(id) % partitionSize, 指定Shard里replica的序号
             partitionOffset = Math.floorMod(Murmur3HashFunction.hash(id), indexMetaData.getRoutingPartitionSize());
         } else {
             // we would have still got 0 above but this check just saves us an unnecessary hash calculation

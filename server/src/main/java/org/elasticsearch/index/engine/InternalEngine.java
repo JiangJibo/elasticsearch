@@ -2107,6 +2107,12 @@ public class InternalEngine extends Engine {
         }
     }
 
+    /**
+     * 创建Lucen的IndexWriter
+     *
+     * @return
+     * @throws IOException
+     */
     private IndexWriter createWriter() throws IOException {
         try {
             final IndexWriterConfig iwc = getIndexWriterConfig();

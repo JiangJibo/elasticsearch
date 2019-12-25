@@ -77,6 +77,7 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
     protected void resolveRequest(ClusterState state, InternalRequest request) {
         IndexMetaData indexMeta = state.getMetaData().index(request.concreteIndex());
         // update the routing (request#index here is possibly an alias)
+        // 更新路由指引
         request.request().routing(state.metaData().resolveIndexRouting(request.request().parent(), request.request().routing(), request.request().index()));
         // Fail fast on the node that received the request.
         if (request.request().routing() == null && state.getMetaData().routingRequired(request.concreteIndex(), request.request().type())) {

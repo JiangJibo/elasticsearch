@@ -477,6 +477,7 @@ public class MetaData implements Iterable<IndexMetaData>, Diffable<MetaData>, To
 
     /**
      * Returns indexing routing for the given index.
+     * 解析实际的路由信息
      */
     // TODO: This can be moved to IndexNameExpressionResolver too, but this means that we will support wildcards and other expressions
     // in the index,bulk,update and delete apis.
