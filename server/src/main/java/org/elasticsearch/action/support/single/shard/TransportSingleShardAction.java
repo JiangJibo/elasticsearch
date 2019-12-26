@@ -83,6 +83,7 @@ public abstract class TransportSingleShardAction<Request extends SingleShardRequ
         if (!isSubAction()) {
             transportService.registerRequestHandler(actionName, request, ThreadPool.Names.SAME, new TransportHandler());
         }
+        // 注册自身的action 以及对应的 handler
         transportService.registerRequestHandler(transportShardAction, request, executor, new ShardTransportHandler());
     }
 

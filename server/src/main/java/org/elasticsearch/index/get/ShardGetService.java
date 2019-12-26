@@ -69,7 +69,7 @@ public final class ShardGetService extends AbstractIndexShardComponent {
     private final IndexShard indexShard;
 
     public ShardGetService(IndexSettings indexSettings, IndexShard indexShard,
-        MapperService mapperService) {
+                           MapperService mapperService) {
         super(indexShard.shardId(), indexSettings);
         this.mapperService = mapperService;
         this.indexShard = indexShard;
@@ -94,14 +94,14 @@ public final class ShardGetService extends AbstractIndexShardComponent {
      * @return
      */
     public GetResult get(String type, String id, String[] gFields, boolean realtime, long version,
-        VersionType versionType,
-        FetchSourceContext fetchSourceContext) {
+                         VersionType versionType,
+                         FetchSourceContext fetchSourceContext) {
+        // 不从translog 里读取数据
         return get(type, id, gFields, realtime, version, versionType, fetchSourceContext, false);
     }
 
     private GetResult get(String type, String id, String[] gFields, boolean realtime, long version,
-        VersionType versionType,
-        FetchSourceContext fetchSourceContext, boolean readFromTranslog) {
+                          VersionType versionType, FetchSourceContext fetchSourceContext, boolean readFromTranslog) {
         currentMetric.inc();
         try {
             long now = System.nanoTime();
@@ -133,7 +133,7 @@ public final class ShardGetService extends AbstractIndexShardComponent {
      * Note: Call <b>must</b> release engine searcher associated with engineGetResult!
      */
     public GetResult get(Engine.GetResult engineGetResult, String id, String type, String[] fields,
-        FetchSourceContext fetchSourceContext) {
+                         FetchSourceContext fetchSourceContext) {
         if (!engineGetResult.exists()) {
             return new GetResult(shardId.getIndexName(), type, id, -1, false, null, null);
         }
@@ -159,7 +159,7 @@ public final class ShardGetService extends AbstractIndexShardComponent {
      * decides what needs to be done based on the request input and always returns a valid non-null FetchSourceContext
      */
     private FetchSourceContext normalizeFetchSourceContent(@Nullable FetchSourceContext context,
-        @Nullable String[] gFields) {
+                                                           @Nullable String[] gFields) {
         if (context != null) {
             return context;
         }
@@ -188,13 +188,14 @@ public final class ShardGetService extends AbstractIndexShardComponent {
      * @return
      */
     private GetResult innerGet(String type, String id, String[] gFields, boolean realtime, long version,
-        VersionType versionType,
-        FetchSourceContext fetchSourceContext, boolean readFromTranslog) {
+                               VersionType versionType, FetchSourceContext fetchSourceContext, boolean readFromTranslog) {
+        // 是否要fetch _source, 也就是是否要获取实际数据
         fetchSourceContext = normalizeFetchSourceContent(fetchSourceContext, gFields);
         final Collection<String> types;
         if (type == null || type.equals("_all")) {
             types = mapperService.types();
         } else {
+            // 单个元素的集合可以借鉴下
             types = Collections.singleton(type);
         }
 
@@ -203,8 +204,7 @@ public final class ShardGetService extends AbstractIndexShardComponent {
             Term uidTerm = mapperService.createUidTerm(typeX, id);
             if (uidTerm != null) {
                 // 从分片处获取数据, 主要是docID,版本,搜索器
-                get = indexShard.get(new Engine.Get(realtime, readFromTranslog, typeX, id, uidTerm)
-                    .version(version).versionType(versionType));
+                get = indexShard.get(new Engine.Get(realtime, readFromTranslog, typeX, id, uidTerm).version(version).versionType(versionType));
                 if (get.exists()) {
                     type = typeX;
                     break;
@@ -238,7 +238,8 @@ public final class ShardGetService extends AbstractIndexShardComponent {
      * @param mapperService
      * @return
      */
-    private GetResult innerGetLoadFromStoredFields(String type, String id, String[] gFields, FetchSourceContext fetchSourceContext, Engine.GetResult get, MapperService mapperService) {
+    private GetResult innerGetLoadFromStoredFields(String type, String id, String[] gFields, FetchSourceContext fetchSourceContext, Engine.GetResult get,
+                                                   MapperService mapperService) {
         Map<String, DocumentField> fields = null;
         BytesReference source = null;
         DocIdAndVersion docIdAndVersion = get.docIdAndVersion();

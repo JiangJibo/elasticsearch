@@ -40,7 +40,8 @@ import org.elasticsearch.transport.TransportService;
 
 /**
  * Performs the get operation.
- * @see  org.elasticsearch.rest.action.document.RestGetAction
+ *
+ * @see org.elasticsearch.rest.action.document.RestGetAction
  */
 public class TransportGetAction extends TransportSingleShardAction<GetRequest, GetResponse> {
 
@@ -51,7 +52,7 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
                               IndicesService indicesService, ThreadPool threadPool, ActionFilters actionFilters,
                               IndexNameExpressionResolver indexNameExpressionResolver) {
         super(settings, GetAction.NAME, threadPool, clusterService, transportService, actionFilters, indexNameExpressionResolver,
-                GetRequest::new, ThreadPool.Names.GET);
+            GetRequest::new, ThreadPool.Names.GET);
         this.indicesService = indicesService;
     }
 
@@ -70,7 +71,7 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
     @Override
     protected ShardIterator shards(ClusterState state, InternalRequest request) {
         return clusterService.operationRouting()
-                .getShards(clusterService.state(), request.concreteIndex(), request.request().id(), request.request().routing(), request.request().preference());
+            .getShards(clusterService.state(), request.concreteIndex(), request.request().id(), request.request().routing(), request.request().preference());
     }
 
     @Override
@@ -85,6 +86,13 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
         }
     }
 
+    /**
+     * 处理当前分片上的操作
+     *
+     * @param request
+     * @param shardId
+     * @return
+     */
     @Override
     protected GetResponse shardOperation(GetRequest request, ShardId shardId) {
         IndexService indexService = indicesService.indexServiceSafe(shardId.getIndex());
@@ -97,7 +105,7 @@ public class TransportGetAction extends TransportSingleShardAction<GetRequest, G
         }
         // 获取doc
         GetResult result = indexShard.getService().get(request.type(), request.id(), request.storedFields(),
-                request.realtime(), request.version(), request.versionType(), request.fetchSourceContext());
+            request.realtime(), request.version(), request.versionType(), request.fetchSourceContext());
         return new GetResponse(result);
     }
 
