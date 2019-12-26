@@ -91,6 +91,10 @@ public class TransportService extends AbstractLifecycleComponent {
     volatile Map<String, RequestHandlerRegistry> requestHandlers = Collections.emptyMap();
     final Object requestHandlerMutex = new Object();
 
+    /**
+     *  存储 requestId >> 接收到response的handler, 或者timeoutHandler
+     * @see {@link #onResponseReceived(long)}
+     */
     final ConcurrentMapLong<RequestHolder> clientHandlers = ConcurrentCollections.newConcurrentMapLongWithAggressiveConcurrency();
 
     final CopyOnWriteArrayList<TransportConnectionListener> connectionListeners = new CopyOnWriteArrayList<>();
@@ -625,6 +629,7 @@ public class TransportService extends AbstractLifecycleComponent {
             }
             if (timeoutHandler != null) {
                 assert options.timeout() != null;
+                // 定时任务timeout, 当到时间时触发timeout 操作
                 timeoutHandler.future = threadPool.schedule(options.timeout(), ThreadPool.Names.GENERIC, timeoutHandler);
             }
             // TcpTransport#sendRequest
