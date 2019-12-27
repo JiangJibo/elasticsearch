@@ -262,6 +262,7 @@ public final class ShardGetService extends AbstractIndexShardComponent {
         }
 
         DocumentMapper docMapper = mapperService.documentMapper(type);
+        // 将parent的id放到返回值中
         if (docMapper.parentFieldMapper().active()) {
             String parentId = ParentFieldSubFetchPhase.getParentId(docMapper.parentFieldMapper(),
                 docIdAndVersion.reader, docIdAndVersion.docId);
@@ -286,7 +287,9 @@ public final class ShardGetService extends AbstractIndexShardComponent {
 
         if (!fetchSourceContext.fetchSource()) {
             source = null;
-        } else if (fetchSourceContext.includes().length > 0 || fetchSourceContext.excludes().length > 0) {
+        }
+        // 根据请求中的includes,excludes 对返回值做过滤
+        else if (fetchSourceContext.includes().length > 0 || fetchSourceContext.excludes().length > 0) {
             Map<String, Object> sourceAsMap;
             XContentType sourceContentType = null;
             // TODO: The source might parsed and available in the sourceLookup but that one uses unordered maps so
@@ -294,6 +297,7 @@ public final class ShardGetService extends AbstractIndexShardComponent {
             Tuple<XContentType, Map<String, Object>> typeMapTuple = XContentHelper.convertToMap(source, true);
             sourceContentType = typeMapTuple.v1();
             sourceAsMap = typeMapTuple.v2();
+            // 过滤数据
             sourceAsMap = XContentMapValues.filter(sourceAsMap, fetchSourceContext.includes(),
                 fetchSourceContext.excludes());
             try {

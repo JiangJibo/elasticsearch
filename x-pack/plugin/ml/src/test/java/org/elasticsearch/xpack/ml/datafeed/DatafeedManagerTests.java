@@ -52,7 +52,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.function.Consumer;
 
-import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
+//import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.mockito.Matchers.any;
@@ -86,7 +86,7 @@ public class DatafeedManagerTests extends ESTestCase {
         DatafeedConfig datafeed = createDatafeedConfig("datafeed_id", job.getId()).build();
         mlMetadata.putDatafeed(datafeed, null);
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
         PersistentTasksCustomMetaData tasks = tasksBuilder.build();
         DiscoveryNodes nodes = DiscoveryNodes.builder()
                 .add(new DiscoveryNode("node_name", "node_id", new TransportAddress(InetAddress.getLoopbackAddress(), 9300),
@@ -252,7 +252,7 @@ public class DatafeedManagerTests extends ESTestCase {
 
     public void testDatafeedTaskWaitsUntilJobIsOpened() {
         PersistentTasksCustomMetaData.Builder tasksBuilder = PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", "node_id", JobState.OPENING, tasksBuilder);
+        //addJobTask("job_id", "node_id", JobState.OPENING, tasksBuilder);
         ClusterState.Builder cs = ClusterState.builder(clusterService.state())
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, MlMetadata.getMlMetadata(clusterService.state()))
                     .putCustom(PersistentTasksCustomMetaData.TYPE, tasksBuilder.build()));
@@ -266,8 +266,8 @@ public class DatafeedManagerTests extends ESTestCase {
         verify(threadPool, never()).executor(MachineLearning.DATAFEED_THREAD_POOL_NAME);
 
         tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", "node_id", JobState.OPENING, tasksBuilder);
-        addJobTask("another_job", "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask("job_id", "node_id", JobState.OPENING, tasksBuilder);
+        //addJobTask("another_job", "node_id", JobState.OPENED, tasksBuilder);
         ClusterState.Builder anotherJobCs = ClusterState.builder(clusterService.state())
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, MlMetadata.getMlMetadata(clusterService.state()))
                     .putCustom(PersistentTasksCustomMetaData.TYPE, tasksBuilder.build()));
@@ -278,7 +278,7 @@ public class DatafeedManagerTests extends ESTestCase {
         verify(threadPool, never()).executor(MachineLearning.DATAFEED_THREAD_POOL_NAME);
 
         tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask("job_id", "node_id", JobState.OPENED, tasksBuilder);
         ClusterState.Builder jobOpenedCs = ClusterState.builder(clusterService.state())
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, MlMetadata.getMlMetadata(clusterService.state()))
                     .putCustom(PersistentTasksCustomMetaData.TYPE, tasksBuilder.build()));
@@ -292,7 +292,7 @@ public class DatafeedManagerTests extends ESTestCase {
 
     public void testDatafeedTaskStopsBecauseJobFailedWhileOpening() {
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", "node_id", JobState.OPENING, tasksBuilder);
+        //addJobTask("job_id", "node_id", JobState.OPENING, tasksBuilder);
         ClusterState.Builder cs = ClusterState.builder(clusterService.state())
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, MlMetadata.getMlMetadata(clusterService.state()))
                     .putCustom(PersistentTasksCustomMetaData.TYPE, tasksBuilder.build()));
@@ -306,7 +306,7 @@ public class DatafeedManagerTests extends ESTestCase {
         verify(threadPool, never()).executor(MachineLearning.DATAFEED_THREAD_POOL_NAME);
 
         tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", "node_id", JobState.FAILED, tasksBuilder);
+        //addJobTask("job_id", "node_id", JobState.FAILED, tasksBuilder);
         ClusterState.Builder updatedCs = ClusterState.builder(clusterService.state())
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, MlMetadata.getMlMetadata(clusterService.state()))
                     .putCustom(PersistentTasksCustomMetaData.TYPE, tasksBuilder.build()));
@@ -320,7 +320,7 @@ public class DatafeedManagerTests extends ESTestCase {
 
     public void testDatafeedGetsStoppedWhileWaitingForJobToOpen() {
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", "node_id", JobState.OPENING, tasksBuilder);
+        //addJobTask("job_id", "node_id", JobState.OPENING, tasksBuilder);
         ClusterState.Builder cs = ClusterState.builder(clusterService.state())
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, MlMetadata.getMlMetadata(clusterService.state()))
                     .putCustom(PersistentTasksCustomMetaData.TYPE, tasksBuilder.build()));
@@ -338,7 +338,7 @@ public class DatafeedManagerTests extends ESTestCase {
 
         // Update job state to opened
         tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask("job_id", "node_id", JobState.OPENED, tasksBuilder);
         ClusterState.Builder updatedCs = ClusterState.builder(clusterService.state())
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, MlMetadata.getMlMetadata(clusterService.state()))
                     .putCustom(PersistentTasksCustomMetaData.TYPE, tasksBuilder.build()));

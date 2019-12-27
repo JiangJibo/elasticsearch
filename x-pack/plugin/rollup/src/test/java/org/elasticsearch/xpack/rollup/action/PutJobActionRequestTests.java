@@ -9,7 +9,6 @@ package org.elasticsearch.xpack.rollup.action;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.test.AbstractStreamableXContentTestCase;
 import org.elasticsearch.xpack.core.rollup.action.PutRollupJobAction.Request;
-import org.elasticsearch.xpack.core.rollup.ConfigTestHelpers;
 import org.junit.Before;
 
 public class PutJobActionRequestTests extends AbstractStreamableXContentTestCase<Request> {

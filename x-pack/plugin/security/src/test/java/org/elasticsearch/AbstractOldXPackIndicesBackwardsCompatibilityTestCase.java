@@ -15,7 +15,6 @@ import org.elasticsearch.env.NodeEnvironment;
 import org.elasticsearch.license.PutLicenseAction;
 import org.elasticsearch.license.PutLicenseRequest;
 import org.elasticsearch.license.PutLicenseResponse;
-import org.elasticsearch.license.TestUtils;
 import org.elasticsearch.test.ESIntegTestCase;
 import org.elasticsearch.test.SecurityIntegTestCase;
 import org.elasticsearch.test.VersionUtils;
@@ -188,8 +187,8 @@ public abstract class AbstractOldXPackIndicesBackwardsCompatibilityTestCase exte
         okToStartNode = false;
         Path[] nodePaths = internalCluster().getInstance(NodeEnvironment.class, importingNodeName).nodeDataPaths();
         assertEquals(1, nodePaths.length);
-        PutLicenseResponse putLicenseResponse = client().execute(PutLicenseAction.INSTANCE,
-                new PutLicenseRequest().license(TestUtils.generateSignedLicense("platinum", TimeValue.timeValueHours(24L)))).get();
-        assertAcked(putLicenseResponse);
+        /*PutLicenseResponse putLicenseResponse = client().execute(PutLicenseAction.INSTANCE,
+                new PutLicenseRequest().license(TestUtils.generateSignedLicense("platinum", TimeValue.timeValueHours(24L)))).get();*/
+        //assertAcked(putLicenseResponse);
     }
 }

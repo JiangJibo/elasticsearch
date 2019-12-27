@@ -41,7 +41,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
+//import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
 import static org.elasticsearch.xpack.ml.support.BaseMlIntegTestCase.createDatafeed;
 import static org.elasticsearch.xpack.ml.support.BaseMlIntegTestCase.createScheduledJob;
 import static org.hamcrest.Matchers.containsString;
@@ -72,7 +72,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
         mlMetadata = mlMetadataBuilder.build();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
         tasks = tasksBuilder.build();
 
         givenClusterState("foo", 1, 0);
@@ -90,7 +90,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
         mlMetadata = mlMetadataBuilder.build();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), "node_id", null, tasksBuilder);
+        //addJobTask(job.getId(), "node_id", null, tasksBuilder);
         tasks = tasksBuilder.build();
 
         givenClusterState("foo", 1, 0);
@@ -133,7 +133,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
         JobState jobState = randomFrom(JobState.FAILED, JobState.CLOSED);
-        addJobTask(job.getId(), "node_id", jobState, tasksBuilder);
+        //addJobTask(job.getId(), "node_id", jobState, tasksBuilder);
         tasks = tasksBuilder.build();
 
         givenClusterState("foo", 1, 0);
@@ -160,7 +160,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
         mlMetadata = mlMetadataBuilder.build();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
         tasks = tasksBuilder.build();
 
         List<Tuple<Integer, ShardRoutingState>> states = new ArrayList<>(2);
@@ -186,7 +186,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
         mlMetadata = mlMetadataBuilder.build();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
         tasks = tasksBuilder.build();
 
         List<Tuple<Integer, ShardRoutingState>> states = new ArrayList<>(2);
@@ -211,7 +211,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
         mlMetadata = mlMetadataBuilder.build();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
         tasks = tasksBuilder.build();
 
         givenClusterState("foo", 1, 0);
@@ -235,7 +235,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
         mlMetadata = mlMetadataBuilder.build();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job.getId(), "node_id", JobState.OPENED, tasksBuilder);
         tasks = tasksBuilder.build();
 
         givenClusterState("foo", 1, 0);
@@ -253,7 +253,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
 
         String nodeId = randomBoolean() ? "node_id2" : null;
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), nodeId, JobState.OPENED, tasksBuilder);
+        //addJobTask(job.getId(), nodeId, JobState.OPENED, tasksBuilder);
         // Set to lower allocationId, so job task is stale:
         tasksBuilder.updateTaskStatus(MlMetadata.jobTaskId(job.getId()), new JobTaskStatus(JobState.OPENED, 0));
         tasks = tasksBuilder.build();
@@ -271,7 +271,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
                 + "[cannot start datafeed [datafeed_id], job [job_id] status is stale]"));
 
         tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), "node_id1", JobState.OPENED, tasksBuilder);
+        //addJobTask(job.getId(), "node_id1", JobState.OPENED, tasksBuilder);
         tasks = tasksBuilder.build();
         givenClusterState("foo", 1, 0);
         result = new DatafeedNodeSelector(clusterState, resolver, "datafeed_id").selectNode();
@@ -290,7 +290,7 @@ public class DatafeedNodeSelectorTests extends ESTestCase {
         mlMetadata = mlMetadataBuilder.build();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job.getId(), "node_id", JobState.OPENING, tasksBuilder);
+        //addJobTask(job.getId(), "node_id", JobState.OPENING, tasksBuilder);
         tasks = tasksBuilder.build();
 
         givenClusterState("foo", 1, 0);

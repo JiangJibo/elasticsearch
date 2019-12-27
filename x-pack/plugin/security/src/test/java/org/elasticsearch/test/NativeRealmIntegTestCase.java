@@ -23,6 +23,7 @@ import org.elasticsearch.xpack.core.security.user.BeatsSystemUser;
 import org.elasticsearch.xpack.core.security.user.ElasticUser;
 import org.elasticsearch.xpack.core.security.user.KibanaUser;
 import org.elasticsearch.xpack.core.security.user.LogstashSystemUser;
+import org.elasticsearch.xpack.security.rest.SecuritySettingsSourceField;
 import org.junit.After;
 import org.junit.Before;
 

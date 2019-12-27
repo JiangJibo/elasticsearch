@@ -19,12 +19,11 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.transport.TransportAddress;
 import org.elasticsearch.test.SecurityIntegTestCase;
 import org.elasticsearch.test.SecuritySettingsSource;
-import org.elasticsearch.test.SecuritySettingsSourceField;
-import org.elasticsearch.xpack.core.TestXPackTransportClient;
 import org.elasticsearch.xpack.core.security.authc.AuthenticationServiceField;
 import org.elasticsearch.xpack.security.LocalStateSecurity;
 import org.elasticsearch.xpack.core.security.SecurityField;
 import org.elasticsearch.xpack.core.security.authc.support.UsernamePasswordToken;
+import org.elasticsearch.xpack.security.rest.SecuritySettingsSourceField;
 import org.junit.BeforeClass;
 
 import java.util.Collections;
@@ -32,7 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.elasticsearch.test.SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING;
+import static org.elasticsearch.xpack.security.rest.SecuritySettingsSourceField.TEST_PASSWORD_SECURE_STRING;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.is;
@@ -247,7 +246,8 @@ public class RunAsIntegTests extends SecurityIntegTestCase {
                 .put("cluster.name", clusterName)
                 .build();
 
-        return new TestXPackTransportClient(settings, LocalStateSecurity.class)
-                .addTransportAddress(publishAddress);
+        /*return new TestXPackTransportClient(settings, LocalStateSecurity.class)
+                .addTransportAddress(publishAddress);*/
+        return null;
     }
 }

@@ -38,8 +38,8 @@ import org.elasticsearch.xpack.core.rollup.job.DateHistoGroupConfig;
 import org.elasticsearch.xpack.core.rollup.job.GroupConfig;
 import org.elasticsearch.xpack.core.rollup.job.MetricConfig;
 import org.elasticsearch.xpack.core.rollup.job.RollupJobStats;
-import org.elasticsearch.xpack.core.rollup.ConfigTestHelpers;
 import org.elasticsearch.xpack.rollup.Rollup;
+import org.elasticsearch.xpack.rollup.action.ConfigTestHelpers;
 import org.joda.time.DateTime;
 import org.mockito.stubbing.Answer;
 

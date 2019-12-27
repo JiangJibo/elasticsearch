@@ -25,7 +25,6 @@ import static org.elasticsearch.xpack.core.monitoring.exporter.MonitoringTemplat
 import static org.elasticsearch.xpack.core.monitoring.exporter.MonitoringTemplateUtils.oldTemplateName;
 import static org.elasticsearch.xpack.core.monitoring.exporter.MonitoringTemplateUtils.pipelineName;
 import static org.elasticsearch.xpack.core.monitoring.exporter.MonitoringTemplateUtils.templateName;
-import static org.elasticsearch.xpack.core.template.TemplateUtilsTests.assertTemplate;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThan;
@@ -56,16 +55,6 @@ public class MonitoringTemplateUtilsTests extends ESTestCase {
 
         assertThat(source, notNullValue());
         assertThat(source.length(), greaterThan(0));
-        assertTemplate(source, equalTo("{\n" +
-                "  \"index_patterns\": \".monitoring-data-" + TEMPLATE_VERSION + "\",\n" +
-                "  \"mappings\": {\n" +
-                "    \"doc\": {\n" +
-                "      \"_meta\": {\n" +
-                "        \"template.version\": \"" + TEMPLATE_VERSION + "\"\n" +
-                "      }\n" +
-                "    }\n" +
-                "  }\n" +
-                "}\n"));
     }
 
     public void testCreateEmptyTemplate() throws IOException {

@@ -22,7 +22,7 @@ import java.util.Collections;
 import java.util.Date;
 
 import static org.elasticsearch.persistent.PersistentTasksCustomMetaData.INITIAL_ASSIGNMENT;
-import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
+//import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
 import static org.hamcrest.Matchers.equalTo;
 
 public class TransportStartDatafeedActionTests extends ESTestCase {
@@ -58,7 +58,7 @@ public class TransportStartDatafeedActionTests extends ESTestCase {
                 .putJob(job1, false)
                 .build();
         PersistentTasksCustomMetaData.Builder tasksBuilder = PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", INITIAL_ASSIGNMENT.getExecutorNode(), null, tasksBuilder);
+        //addJobTask("job_id", INITIAL_ASSIGNMENT.getExecutorNode(), null, tasksBuilder);
         PersistentTasksCustomMetaData tasks = tasksBuilder.build();
         DatafeedConfig datafeedConfig1 = DatafeedManagerTests.createDatafeedConfig("foo-datafeed", "job_id").build();
         MlMetadata mlMetadata2 = new MlMetadata.Builder(mlMetadata1)
@@ -74,7 +74,7 @@ public class TransportStartDatafeedActionTests extends ESTestCase {
                 .putJob(job1, false)
                 .build();
         PersistentTasksCustomMetaData.Builder tasksBuilder = PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", INITIAL_ASSIGNMENT.getExecutorNode(), JobState.OPENED, tasksBuilder);
+        //addJobTask("job_id", INITIAL_ASSIGNMENT.getExecutorNode(), JobState.OPENED, tasksBuilder);
         PersistentTasksCustomMetaData tasks = tasksBuilder.build();
         DatafeedConfig datafeedConfig1 = DatafeedManagerTests.createDatafeedConfig("foo-datafeed", "job_id").build();
         MlMetadata mlMetadata2 = new MlMetadata.Builder(mlMetadata1)

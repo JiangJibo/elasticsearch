@@ -20,7 +20,6 @@ import static org.elasticsearch.xpack.qa.sql.jdbc.CsvTestUtils.csvConnection;
 import static org.elasticsearch.xpack.qa.sql.jdbc.CsvTestUtils.executeCsvQuery;
 import static org.elasticsearch.xpack.qa.sql.jdbc.CsvTestUtils.specParser;
 
-@TestLogging(JdbcTestUtils.SQL_TRACE)
 public abstract class DebugCsvSpec extends SpecBaseIntegrationTestCase {
     private final CsvTestCase testCase;
 
@@ -42,8 +41,6 @@ public abstract class DebugCsvSpec extends SpecBaseIntegrationTestCase {
         //
         // uncomment this to printout the result set and create new CSV tests
         //
-        JdbcTestUtils.logResultSetMetadata(elastic, log);
-        JdbcTestUtils.logResultSetData(elastic, log);
         //JdbcAssert.assertResultSets(expected, elastic, log);
     }
 

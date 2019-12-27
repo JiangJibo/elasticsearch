@@ -11,7 +11,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.indices.TermsLookup;
 import org.elasticsearch.test.SecurityIntegTestCase;
 import org.elasticsearch.test.SecuritySettingsSource;
-import org.elasticsearch.test.SecuritySettingsSourceField;
+import org.elasticsearch.xpack.security.rest.SecuritySettingsSourceField;
 import org.junit.Before;
 
 import static java.util.Collections.singletonMap;

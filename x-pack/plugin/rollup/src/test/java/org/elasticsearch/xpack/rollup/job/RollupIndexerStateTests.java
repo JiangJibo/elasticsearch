@@ -24,8 +24,8 @@ import org.elasticsearch.xpack.core.rollup.RollupField;
 import org.elasticsearch.xpack.core.rollup.job.GroupConfig;
 import org.elasticsearch.xpack.core.rollup.job.IndexerState;
 import org.elasticsearch.xpack.core.rollup.job.RollupJob;
-import org.elasticsearch.xpack.core.rollup.ConfigTestHelpers;
 import org.elasticsearch.xpack.core.rollup.job.RollupJobConfig;
+import org.elasticsearch.xpack.rollup.action.ConfigTestHelpers;
 import org.mockito.stubbing.Answer;
 
 import java.io.IOException;

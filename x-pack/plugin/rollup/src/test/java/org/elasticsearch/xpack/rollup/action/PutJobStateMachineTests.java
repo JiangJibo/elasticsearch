@@ -27,7 +27,6 @@ import org.elasticsearch.xpack.core.rollup.RollupField;
 import org.elasticsearch.xpack.core.rollup.action.PutRollupJobAction;
 import org.elasticsearch.xpack.core.rollup.job.RollupJob;
 import org.elasticsearch.xpack.core.rollup.job.RollupJobConfig;
-import org.elasticsearch.xpack.core.rollup.ConfigTestHelpers;
 import org.mockito.ArgumentCaptor;
 
 import java.util.Collections;

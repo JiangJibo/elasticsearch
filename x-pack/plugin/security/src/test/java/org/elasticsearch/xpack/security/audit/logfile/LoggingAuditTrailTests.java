@@ -5,6 +5,17 @@
  */
 package org.elasticsearch.xpack.security.audit.logfile;
 
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.action.IndicesRequest;
@@ -29,7 +40,6 @@ import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.rest.FakeRestRequest;
 import org.elasticsearch.test.rest.FakeRestRequest.Builder;
 import org.elasticsearch.transport.TransportMessage;
-import org.elasticsearch.xpack.core.security.audit.logfile.CapturingLogger;
 import org.elasticsearch.xpack.core.security.authc.Authentication;
 import org.elasticsearch.xpack.core.security.authc.Authentication.RealmRef;
 import org.elasticsearch.xpack.core.security.authc.AuthenticationToken;
@@ -41,21 +51,10 @@ import org.elasticsearch.xpack.security.transport.filter.SecurityIpFilterRule;
 import org.junit.Before;
 import org.mockito.stubbing.Answer;
 
-import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.containsString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -729,9 +728,10 @@ public class LoggingAuditTrailTests extends ESTestCase {
         final String role = randomAlphaOfLengthBetween(1, 6);
         final String realm = randomAlphaOfLengthBetween(1, 6);
         // transport messages without indices
-        final TransportMessage[] messages = new TransportMessage[] { new MockMessage(threadContext),
-                new org.elasticsearch.action.MockIndicesRequest(IndicesOptions.strictExpandOpenAndForbidClosed(), new String[0]),
-                new org.elasticsearch.action.MockIndicesRequest(IndicesOptions.strictExpandOpenAndForbidClosed(), (String[]) null) };
+        /*final TransportMessage[] messages = new TransportMessage[] { new MockMessage(threadContext),
+                new MockIndicesRequest(IndicesOptions.strictExpandOpenAndForbidClosed(), new String[0]),
+                new MockIndicesRequest(IndicesOptions.strictExpandOpenAndForbidClosed(), (String[]) null) };*/
+        final TransportMessage[] messages = new TransportMessage[]{};
         final List<String> output = CapturingLogger.output(logger.getName(), Level.INFO);
         int logEntriesCount = 1;
         for (final TransportMessage message : messages) {
@@ -835,7 +835,7 @@ public class LoggingAuditTrailTests extends ESTestCase {
         }
     }
 
-    static class MockIndicesRequest extends org.elasticsearch.action.MockIndicesRequest {
+    static class MockIndicesRequest extends org.elasticsearch.xpack.security.audit.logfile.MockIndicesRequest {
 
         MockIndicesRequest(ThreadContext threadContext) throws IOException {
             super(IndicesOptions.strictExpandOpenAndForbidClosed(), "idx1", "idx2");

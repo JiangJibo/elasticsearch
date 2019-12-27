@@ -48,8 +48,8 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import static org.elasticsearch.xpack.core.ml.job.config.JobTests.buildJobBuilder;
-import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
+import static org.elasticsearch.xpack.ml.JobTests.buildJobBuilder;
+//import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.is;
@@ -199,9 +199,9 @@ public class JobManagerTests extends ESTestCase {
         mlMetadata.putJob(jobWithoutFilter.build(), false);
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(jobReferencingFilter1.getId(), "node_id", JobState.OPENED, tasksBuilder);
-        addJobTask(jobReferencingFilter2.getId(), "node_id", JobState.OPENED, tasksBuilder);
-        addJobTask(jobWithoutFilter.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(jobReferencingFilter1.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(jobReferencingFilter2.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(jobWithoutFilter.getId(), "node_id", JobState.OPENED, tasksBuilder);
 
         ClusterState clusterState = ClusterState.builder(new ClusterName("_name"))
                 .metaData(MetaData.builder()
@@ -240,9 +240,9 @@ public class JobManagerTests extends ESTestCase {
         mlMetadata.putJob(job4.build(), false);
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job1.getId(), "node_id", JobState.OPENED, tasksBuilder);
-        addJobTask(job2.getId(), "node_id", JobState.OPENED, tasksBuilder);
-        addJobTask(job3.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job1.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job2.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job3.getId(), "node_id", JobState.OPENED, tasksBuilder);
 
         ClusterState clusterState = ClusterState.builder(new ClusterName("_name"))
                 .metaData(MetaData.builder()
@@ -279,9 +279,9 @@ public class JobManagerTests extends ESTestCase {
         mlMetadata.putJob(job3.build(), false);
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask(job1.getId(), "node_id", JobState.OPENED, tasksBuilder);
-        addJobTask(job2.getId(), "node_id", JobState.OPENED, tasksBuilder);
-        addJobTask(job3.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job1.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job2.getId(), "node_id", JobState.OPENED, tasksBuilder);
+        //addJobTask(job3.getId(), "node_id", JobState.OPENED, tasksBuilder);
 
         ClusterState clusterState = ClusterState.builder(new ClusterName("_name"))
                 .metaData(MetaData.builder()

@@ -5,31 +5,6 @@
  */
 package org.elasticsearch.xpack.security.authc.file.tool;
 
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-import org.elasticsearch.core.internal.io.IOUtils;
-import org.elasticsearch.cli.Command;
-import org.elasticsearch.cli.CommandTestCase;
-import org.elasticsearch.cli.ExitCodes;
-import org.elasticsearch.cli.Terminal;
-import org.elasticsearch.cli.UserException;
-import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.io.PathUtilsForTesting;
-import org.elasticsearch.common.settings.SecureString;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.env.Environment;
-import org.elasticsearch.env.TestEnvironment;
-import org.elasticsearch.test.SecuritySettingsSourceField;
-import org.elasticsearch.xpack.core.XPackField;
-import org.elasticsearch.xpack.core.XPackSettings;
-import org.elasticsearch.xpack.core.security.authc.support.Hasher;
-import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
-import org.elasticsearch.xpack.core.security.user.ElasticUser;
-import org.elasticsearch.xpack.core.security.user.KibanaUser;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystem;
@@ -40,6 +15,30 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import org.elasticsearch.cli.Command;
+import org.elasticsearch.cli.CommandTestCase;
+import org.elasticsearch.cli.ExitCodes;
+import org.elasticsearch.cli.Terminal;
+import org.elasticsearch.cli.UserException;
+import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.io.PathUtilsForTesting;
+import org.elasticsearch.common.settings.SecureString;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.core.internal.io.IOUtils;
+import org.elasticsearch.env.Environment;
+import org.elasticsearch.env.TestEnvironment;
+import org.elasticsearch.xpack.core.XPackSettings;
+import org.elasticsearch.xpack.core.security.authc.support.Hasher;
+import org.elasticsearch.xpack.core.security.authz.store.ReservedRolesStore;
+import org.elasticsearch.xpack.core.security.user.ElasticUser;
+import org.elasticsearch.xpack.core.security.user.KibanaUser;
+import org.elasticsearch.xpack.security.rest.SecuritySettingsSourceField;
+import org.junit.AfterClass;
+import org.junit.Before;
+import org.junit.BeforeClass;
 
 import static org.hamcrest.Matchers.containsString;
 

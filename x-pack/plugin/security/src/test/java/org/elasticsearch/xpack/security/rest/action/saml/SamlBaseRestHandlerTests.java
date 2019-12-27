@@ -10,7 +10,6 @@ import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.license.License;
 import org.elasticsearch.license.LicenseUtils;
-import org.elasticsearch.license.TestUtils;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.test.ESTestCase;
 import org.elasticsearch.test.rest.FakeRestRequest;
@@ -47,7 +46,7 @@ public class SamlBaseRestHandlerTests extends ESTestCase {
         final Settings settings = Settings.builder()
                 .put(XPackSettings.SECURITY_ENABLED.getKey(), true)
                 .build();
-        final TestUtils.UpdatableLicenseState licenseState = new TestUtils.UpdatableLicenseState(settings);
+        /*final TestUtils.UpdatableLicenseState licenseState = new TestUtils.UpdatableLicenseState(settings);
         licenseState.update(licenseMode, true, null);
 
         return new SamlBaseRestHandler(settings, licenseState) {
@@ -61,7 +60,8 @@ public class SamlBaseRestHandlerTests extends ESTestCase {
             protected RestChannelConsumer innerPrepareRequest(RestRequest request, NodeClient client) {
                 return null;
             }
-        };
+        };*/
+        return null;
     }
 
 }

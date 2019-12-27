@@ -51,7 +51,7 @@ import org.elasticsearch.xpack.core.rollup.job.IndexerState;
 import org.elasticsearch.xpack.core.rollup.job.MetricConfig;
 import org.elasticsearch.xpack.core.rollup.job.RollupJob;
 import org.elasticsearch.xpack.core.rollup.job.RollupJobConfig;
-import org.elasticsearch.xpack.core.rollup.ConfigTestHelpers;
+import org.elasticsearch.xpack.rollup.action.ConfigTestHelpers;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.junit.Before;

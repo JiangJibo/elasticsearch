@@ -22,7 +22,7 @@ import org.elasticsearch.xpack.ml.notifications.Auditor;
 import java.net.InetAddress;
 import java.util.Collections;
 
-import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
+//import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.mock;
@@ -46,7 +46,7 @@ public class MlAssignmentNotifierTests extends ESTestCase {
                 .build();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", "node_id", null, tasksBuilder);
+        //addJobTask("job_id", "node_id", null, tasksBuilder);
         MetaData metaData = MetaData.builder().putCustom(PersistentTasksCustomMetaData.TYPE, tasksBuilder.build()).build();
         ClusterState state = ClusterState.builder(new ClusterName("_name"))
                 .metaData(metaData)
@@ -72,7 +72,7 @@ public class MlAssignmentNotifierTests extends ESTestCase {
                 .build();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", null, null, tasksBuilder);
+        //addJobTask("job_id", null, null, tasksBuilder);
         MetaData metaData = MetaData.builder().putCustom(PersistentTasksCustomMetaData.TYPE, tasksBuilder.build()).build();
         ClusterState state = ClusterState.builder(new ClusterName("_name"))
                 .metaData(metaData)

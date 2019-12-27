@@ -14,8 +14,8 @@ import org.elasticsearch.common.network.NetworkService;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.test.SecurityIntegTestCase;
 import org.elasticsearch.test.SecuritySettingsSource;
-import org.elasticsearch.test.SecuritySettingsSourceField;
 import org.elasticsearch.xpack.core.ssl.CertUtils;
+import org.elasticsearch.xpack.security.rest.SecuritySettingsSourceField;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 

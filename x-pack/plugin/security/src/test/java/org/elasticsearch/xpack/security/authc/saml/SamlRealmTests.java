@@ -15,8 +15,8 @@ import org.elasticsearch.common.settings.SettingsException;
 import org.elasticsearch.common.util.concurrent.ThreadContext;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.env.TestEnvironment;
-import org.elasticsearch.test.http.MockResponse;
-import org.elasticsearch.test.http.MockWebServer;
+//import org.elasticsearch.test.http.MockResponse;
+//import org.elasticsearch.test.http.MockWebServer;
 import org.elasticsearch.watcher.ResourceWatcherService;
 import org.elasticsearch.xpack.core.security.authc.AuthenticationResult;
 import org.elasticsearch.xpack.core.security.authc.RealmConfig;
@@ -24,7 +24,7 @@ import org.elasticsearch.xpack.core.security.authc.RealmSettings;
 import org.elasticsearch.xpack.core.security.authc.saml.SamlRealmSettings;
 import org.elasticsearch.xpack.core.ssl.CertUtils;
 import org.elasticsearch.xpack.core.ssl.SSLService;
-import org.elasticsearch.xpack.core.ssl.TestsSSLService;
+//import org.elasticsearch.xpack.core.ssl.TestsSSLService;
 import org.elasticsearch.xpack.security.authc.support.UserRoleMapper;
 import org.junit.Before;
 import org.mockito.Mockito;
@@ -118,7 +118,7 @@ public class SamlRealmTests extends SamlTestCase {
                 .put("path.home", createTempDir())
                 .setSecureSettings(mockSecureSettings)
                 .build();
-        TestsSSLService sslService = new TestsSSLService(settings, TestEnvironment.newEnvironment(settings));
+        /*TestsSSLService sslService = new TestsSSLService(settings, TestEnvironment.newEnvironment(settings));
         try (MockWebServer proxyServer = new MockWebServer(sslService.sslContext(Settings.EMPTY), false)) {
             proxyServer.start();
             proxyServer.enqueue(new MockResponse().setResponseCode(200).setBody(body).addHeader("Content-Type", "application/xml"));
@@ -138,7 +138,7 @@ public class SamlRealmTests extends SamlTestCase {
             } finally {
                 tuple.v1().destroy();
             }
-        }
+        }*/
     }
 
     public void testAuthenticateWithRoleMapping() throws Exception {

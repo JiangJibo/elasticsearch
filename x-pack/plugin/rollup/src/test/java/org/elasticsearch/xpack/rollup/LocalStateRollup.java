@@ -6,7 +6,6 @@
 package org.elasticsearch.xpack.rollup;
 
 import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.xpack.core.LocalStateCompositeXPackPlugin;
 
 import java.nio.file.Path;
 

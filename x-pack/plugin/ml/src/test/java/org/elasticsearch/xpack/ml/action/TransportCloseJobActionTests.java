@@ -41,7 +41,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
+//import static org.elasticsearch.xpack.ml.action.TransportOpenJobActionTests.addJobTask;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -53,7 +53,7 @@ public class TransportCloseJobActionTests extends ESTestCase {
         mlBuilder.putDatafeed(BaseMlIntegTestCase.createDatafeed("datafeed_id", "job_id",
                 Collections.singletonList("*")), null);
         final PersistentTasksCustomMetaData.Builder startDataFeedTaskBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", null, JobState.OPENED, startDataFeedTaskBuilder);
+        //addJobTask("job_id", null, JobState.OPENED, startDataFeedTaskBuilder);
         addTask("datafeed_id", 0L, null, DatafeedState.STARTED, startDataFeedTaskBuilder);
 
         ElasticsearchStatusException e =
@@ -64,7 +64,7 @@ public class TransportCloseJobActionTests extends ESTestCase {
         assertEquals("cannot close job [job_id], datafeed hasn't been stopped", e.getMessage());
 
         final PersistentTasksCustomMetaData.Builder dataFeedNotStartedTaskBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id", null, JobState.OPENED, dataFeedNotStartedTaskBuilder);
+        //addJobTask("job_id", null, JobState.OPENED, dataFeedNotStartedTaskBuilder);
         if (randomBoolean()) {
             addTask("datafeed_id", 0L, null, DatafeedState.STOPPED, dataFeedNotStartedTaskBuilder);
         }
@@ -78,7 +78,7 @@ public class TransportCloseJobActionTests extends ESTestCase {
 
         // An opening job has a null status field
         PersistentTasksCustomMetaData.Builder tasksBuilder = PersistentTasksCustomMetaData.builder();
-        addJobTask("opening-job", null, null, tasksBuilder);
+        //addJobTask("opening-job", null, null, tasksBuilder);
 
         TransportCloseJobAction.validateJobAndTaskState("opening-job", mlBuilder.build(), tasksBuilder.build());
     }
@@ -87,7 +87,7 @@ public class TransportCloseJobActionTests extends ESTestCase {
         MlMetadata.Builder mlBuilder = new MlMetadata.Builder();
 
         PersistentTasksCustomMetaData.Builder tasksBuilder = PersistentTasksCustomMetaData.builder();
-        addJobTask("missing-job", null, null, tasksBuilder);
+        //addJobTask("missing-job", null, null, tasksBuilder);
 
         expectThrows(ResourceNotFoundException.class, () ->
                 TransportCloseJobAction.validateJobAndTaskState("missing-job", mlBuilder.build(), tasksBuilder.build()));
@@ -102,10 +102,10 @@ public class TransportCloseJobActionTests extends ESTestCase {
         mlBuilder.putJob(BaseMlIntegTestCase.createScheduledJob("job_id_5").build(new Date()), false);
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id_1", null, JobState.OPENED, tasksBuilder);
-        addJobTask("job_id_2", null, JobState.OPENED, tasksBuilder);
-        addJobTask("job_id_3", null, JobState.FAILED, tasksBuilder);
-        addJobTask("job_id_4", null, JobState.CLOSING, tasksBuilder);
+        //addJobTask("job_id_1", null, JobState.OPENED, tasksBuilder);
+        //addJobTask("job_id_2", null, JobState.OPENED, tasksBuilder);
+        //addJobTask("job_id_3", null, JobState.FAILED, tasksBuilder);
+        //addJobTask("job_id_4", null, JobState.CLOSING, tasksBuilder);
 
         ClusterState cs1 = ClusterState.builder(new ClusterName("_name"))
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, mlBuilder.build())
@@ -131,7 +131,7 @@ public class TransportCloseJobActionTests extends ESTestCase {
         mlBuilder.putJob(BaseMlIntegTestCase.createFareQuoteJob("job_id_1").build(new Date()), false);
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id_1", null, JobState.OPENED, tasksBuilder);
+        //addJobTask("job_id_1", null, JobState.OPENED, tasksBuilder);
 
         ClusterState cs1 = ClusterState.builder(new ClusterName("_name"))
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, mlBuilder.build())
@@ -179,7 +179,7 @@ public class TransportCloseJobActionTests extends ESTestCase {
         mlBuilder.putJob(BaseMlIntegTestCase.createFareQuoteJob("job_id_failed").build(new Date()), false);
 
         PersistentTasksCustomMetaData.Builder tasksBuilder = PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id_failed", null, JobState.FAILED, tasksBuilder);
+        //addJobTask("job_id_failed", null, JobState.FAILED, tasksBuilder);
 
         ClusterState cs1 = ClusterState.builder(new ClusterName("_name")).metaData(new MetaData.Builder()
                 .putCustom(MLMetadataField.TYPE, mlBuilder.build()).putCustom(PersistentTasksCustomMetaData.TYPE,
@@ -211,9 +211,9 @@ public class TransportCloseJobActionTests extends ESTestCase {
         mlBuilder.putJob(BaseMlIntegTestCase.createFareQuoteJob("job_id_closed").build(new Date()), false);
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("job_id_closing", null, JobState.CLOSING, tasksBuilder);
-        addJobTask("job_id_open-1", null, JobState.OPENED, tasksBuilder);
-        addJobTask("job_id_open-2", null, JobState.OPENED, tasksBuilder);
+        //addJobTask("job_id_closing", null, JobState.CLOSING, tasksBuilder);
+        //addJobTask("job_id_open-1", null, JobState.OPENED, tasksBuilder);
+        //addJobTask("job_id_open-2", null, JobState.OPENED, tasksBuilder);
         // closed job has no task
 
         ClusterState cs1 = ClusterState.builder(new ClusterName("_name"))
@@ -254,7 +254,7 @@ public class TransportCloseJobActionTests extends ESTestCase {
         mlBuilder.putJob(BaseMlIntegTestCase.createFareQuoteJob("foo").build(new Date()), false);
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("foo", null, JobState.CLOSED, tasksBuilder);
+        //addJobTask("foo", null, JobState.CLOSED, tasksBuilder);
 
         ClusterState clusterState = ClusterState.builder(new ClusterName("_name"))
                 .metaData(new MetaData.Builder().putCustom(MLMetadataField.TYPE, mlBuilder.build())
@@ -294,9 +294,9 @@ public class TransportCloseJobActionTests extends ESTestCase {
         List<String> closingJobIds = Collections.singletonList("closingjob1");
 
         PersistentTasksCustomMetaData.Builder tasksBuilder =  PersistentTasksCustomMetaData.builder();
-        addJobTask("openjob1", null, JobState.OPENED, tasksBuilder);
-        addJobTask("openjob2", null, JobState.OPENED, tasksBuilder);
-        addJobTask("closingjob1", null, JobState.CLOSING, tasksBuilder);
+        //addJobTask("openjob1", null, JobState.OPENED, tasksBuilder);
+        //addJobTask("openjob2", null, JobState.OPENED, tasksBuilder);
+        //addJobTask("closingjob1", null, JobState.CLOSING, tasksBuilder);
 
         TransportCloseJobAction.WaitForCloseRequest waitForCloseRequest =
                 TransportCloseJobAction.buildWaitForCloseRequest(openJobIds, closingJobIds, tasksBuilder.build(), mock(Auditor.class));

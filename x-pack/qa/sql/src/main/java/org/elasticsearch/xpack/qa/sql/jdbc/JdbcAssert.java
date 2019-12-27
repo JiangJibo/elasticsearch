@@ -69,7 +69,6 @@ public class JdbcAssert {
         ResultSetMetaData actualMeta = actual.getMetaData();
 
         if (logger != null) {
-            JdbcTestUtils.logResultSetMetadata(actual, logger);
         }
 
         if (expectedMeta.getColumnCount() != actualMeta.getColumnCount()) {
@@ -144,7 +143,6 @@ public class JdbcAssert {
                 assertTrue("Expected more data but no more entries found after [" + count + "]", actual.next());
 
                 if (logger != null) {
-                    logger.info(JdbcTestUtils.resultSetCurrentData(actual));
                 }
 
                 for (int column = 1; column <= columns; column++) {
@@ -203,14 +201,11 @@ public class JdbcAssert {
         } catch (AssertionError ae) {
             if (logger != null && actual.next()) {
                 logger.info("^^^ Assertion failure ^^^");
-                logger.info(JdbcTestUtils.resultSetCurrentData(actual));
             }
             throw ae;
         }
 
         if (actual.next()) {
-            fail("Elasticsearch [" + actual + "] still has data after [" + count + "] entries:\n"
-                    + JdbcTestUtils.resultSetCurrentData(actual));
         }
     }
 

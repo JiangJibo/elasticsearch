@@ -5,20 +5,20 @@
  */
 package org.elasticsearch.xpack.ml.job.config;
 
+import java.util.Collections;
+import java.util.Date;
+
 import org.elasticsearch.common.io.stream.Writeable;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.test.AbstractSerializingTestCase;
-import org.elasticsearch.xpack.core.ml.job.config.AnalysisConfigTests;
-import org.elasticsearch.xpack.core.ml.job.config.AnalysisLimitsTests;
 import org.elasticsearch.xpack.core.ml.job.config.DataDescription;
 import org.elasticsearch.xpack.core.ml.job.config.Job;
 import org.elasticsearch.xpack.core.ml.job.config.ModelPlotConfig;
+import org.elasticsearch.xpack.ml.AnalysisConfigTests;
+import org.elasticsearch.xpack.ml.AnalysisLimitsTests;
 
-import java.util.Collections;
-import java.util.Date;
-
-import static org.elasticsearch.xpack.core.ml.job.config.JobTests.randomValidJobId;
+import static org.elasticsearch.xpack.ml.JobTests.randomValidJobId;
 
 public class JobBuilderTests extends AbstractSerializingTestCase<Job.Builder> {
     @Override
@@ -52,7 +52,7 @@ public class JobBuilderTests extends AbstractSerializingTestCase<Job.Builder> {
         }
         if (randomBoolean()) {
             builder.setModelPlotConfig(new ModelPlotConfig(randomBoolean(),
-                    randomAlphaOfLength(10)));
+                randomAlphaOfLength(10)));
         }
         if (randomBoolean()) {
             builder.setRenormalizationWindowDays(randomNonNegativeLong());
@@ -68,7 +68,7 @@ public class JobBuilderTests extends AbstractSerializingTestCase<Job.Builder> {
         }
         if (randomBoolean()) {
             builder.setCustomSettings(Collections.singletonMap(randomAlphaOfLength(10),
-                    randomAlphaOfLength(10)));
+                randomAlphaOfLength(10)));
         }
         if (randomBoolean()) {
             builder.setModelSnapshotId(randomAlphaOfLength(10));

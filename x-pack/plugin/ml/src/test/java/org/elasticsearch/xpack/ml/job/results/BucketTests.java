@@ -10,7 +10,6 @@ import org.elasticsearch.common.xcontent.XContentParser;
 import org.elasticsearch.common.xcontent.json.JsonXContent;
 import org.elasticsearch.test.AbstractSerializingTestCase;
 import org.elasticsearch.xpack.core.ml.job.results.AnomalyRecord;
-import org.elasticsearch.xpack.core.ml.job.results.AnomalyRecordTests;
 import org.elasticsearch.xpack.core.ml.job.results.Bucket;
 import org.elasticsearch.xpack.core.ml.job.results.BucketInfluencer;
 import org.elasticsearch.xpack.core.ml.job.results.PartitionScore;
@@ -77,8 +76,8 @@ public class BucketTests extends AbstractSerializingTestCase<Bucket> {
             int size = randomInt(10);
             List<AnomalyRecord> records = new ArrayList<>(size);
             for (int i = 0; i < size; i++) {
-                AnomalyRecord anomalyRecord = new AnomalyRecordTests().createTestInstance(jobId);
-                records.add(anomalyRecord);
+                //AnomalyRecord anomalyRecord = new AnomalyRecordTests().createTestInstance(jobId);
+                //records.add(anomalyRecord);
             }
             bucket.setRecords(records);
         }

@@ -5,42 +5,6 @@
  */
 package org.elasticsearch.xpack.core.ssl;
 
-import com.google.common.jimfs.Configuration;
-import com.google.common.jimfs.Jimfs;
-import org.elasticsearch.core.internal.io.IOUtils;
-import org.bouncycastle.asn1.ASN1ObjectIdentifier;
-import org.bouncycastle.asn1.ASN1Sequence;
-import org.bouncycastle.asn1.ASN1String;
-import org.bouncycastle.asn1.DEROctetString;
-import org.bouncycastle.asn1.DERTaggedObject;
-import org.bouncycastle.asn1.pkcs.Attribute;
-import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
-import org.bouncycastle.asn1.x509.Extension;
-import org.bouncycastle.asn1.x509.Extensions;
-import org.bouncycastle.asn1.x509.GeneralName;
-import org.bouncycastle.asn1.x509.GeneralNames;
-import org.bouncycastle.cert.X509CertificateHolder;
-import org.bouncycastle.openssl.PEMEncryptedKeyPair;
-import org.bouncycastle.openssl.PEMParser;
-import org.bouncycastle.pkcs.PKCS10CertificationRequest;
-import org.elasticsearch.cli.MockTerminal;
-import org.elasticsearch.common.Strings;
-import org.elasticsearch.common.SuppressForbidden;
-import org.elasticsearch.common.io.PathUtils;
-import org.elasticsearch.common.network.NetworkAddress;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.env.Environment;
-import org.elasticsearch.env.TestEnvironment;
-import org.elasticsearch.test.ESTestCase;
-import org.elasticsearch.test.SecuritySettingsSourceField;
-import org.elasticsearch.xpack.core.ssl.CertificateGenerateTool.CAInfo;
-import org.elasticsearch.xpack.core.ssl.CertificateGenerateTool.CertificateInformation;
-import org.elasticsearch.xpack.core.ssl.CertificateGenerateTool.Name;
-import org.hamcrest.Matchers;
-import org.junit.After;
-
-import javax.security.auth.x500.X500Principal;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -73,11 +37,45 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static org.elasticsearch.test.TestMatchers.pathExists;
+import javax.security.auth.x500.X500Principal;
+
+import com.google.common.jimfs.Configuration;
+import com.google.common.jimfs.Jimfs;
+import org.bouncycastle.asn1.ASN1ObjectIdentifier;
+import org.bouncycastle.asn1.ASN1Sequence;
+import org.bouncycastle.asn1.ASN1String;
+import org.bouncycastle.asn1.DEROctetString;
+import org.bouncycastle.asn1.DERTaggedObject;
+import org.bouncycastle.asn1.pkcs.Attribute;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.cert.X509CertificateHolder;
+import org.bouncycastle.openssl.PEMEncryptedKeyPair;
+import org.bouncycastle.openssl.PEMParser;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.elasticsearch.cli.MockTerminal;
+import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.SuppressForbidden;
+import org.elasticsearch.common.io.PathUtils;
+import org.elasticsearch.common.network.NetworkAddress;
+import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.core.internal.io.IOUtils;
+import org.elasticsearch.env.Environment;
+import org.elasticsearch.env.TestEnvironment;
+import org.elasticsearch.test.ESTestCase;
+import org.elasticsearch.xpack.core.ssl.CertificateGenerateTool.CAInfo;
+import org.elasticsearch.xpack.core.ssl.CertificateGenerateTool.CertificateInformation;
+import org.elasticsearch.xpack.core.ssl.CertificateGenerateTool.Name;
+import org.elasticsearch.xpack.security.rest.SecuritySettingsSourceField;
+import org.hamcrest.Matchers;
+import org.junit.After;
+
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 
 /**
@@ -337,7 +335,6 @@ public class CertificateGenerateToolTests extends ESTestCase {
                     assertSubjAltNames(subjAltNames, certInfo);
                 }
                 if (pkcs12Password != null) {
-                    assertThat(p12, pathExists(p12));
                     try (InputStream in = Files.newInputStream(p12)) {
                         final KeyStore ks = KeyStore.getInstance("PKCS12");
                         ks.load(in, pkcs12Password);
@@ -348,7 +345,6 @@ public class CertificateGenerateToolTests extends ESTestCase {
                         assertThat(key, notNullValue());
                     }
                 } else {
-                    assertThat(p12, not(pathExists(p12)));
                 }
             }
         }

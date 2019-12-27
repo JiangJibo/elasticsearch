@@ -27,9 +27,9 @@ import org.elasticsearch.search.aggregations.metrics.sum.SumAggregationBuilder;
 import org.elasticsearch.search.aggregations.support.ValueType;
 import org.elasticsearch.search.aggregations.support.ValuesSourceAggregationBuilder;
 import org.elasticsearch.test.ESTestCase;
-import org.elasticsearch.xpack.core.rollup.ConfigTestHelpers;
 import org.elasticsearch.xpack.core.rollup.action.RollupJobCaps;
 import org.elasticsearch.xpack.core.rollup.job.MetricConfig;
+import org.elasticsearch.xpack.rollup.action.ConfigTestHelpers;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 

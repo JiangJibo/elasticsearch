@@ -89,7 +89,7 @@ public class ScheduledEvent implements ToXContentObject, Writeable {
     private final String calendarId;
     private final String eventId;
 
-    ScheduledEvent(String description, ZonedDateTime startTime, ZonedDateTime endTime, String calendarId, @Nullable String eventId) {
+    public ScheduledEvent(String description, ZonedDateTime startTime, ZonedDateTime endTime, String calendarId, @Nullable String eventId) {
         this.description = Objects.requireNonNull(description);
         this.startTime = Objects.requireNonNull(startTime);
         this.endTime = Objects.requireNonNull(endTime);

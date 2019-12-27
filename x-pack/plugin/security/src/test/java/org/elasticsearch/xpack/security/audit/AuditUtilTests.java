@@ -5,9 +5,9 @@
  */
 package org.elasticsearch.xpack.security.audit;
 
-import org.elasticsearch.action.MockIndicesRequest;
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.test.ESTestCase;
+import org.elasticsearch.xpack.security.audit.logfile.MockIndicesRequest;
 
 import java.util.ArrayList;
 import java.util.HashSet;

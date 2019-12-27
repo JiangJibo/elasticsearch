@@ -18,9 +18,9 @@ import org.elasticsearch.xpack.core.ml.job.results.Forecast;
 import org.elasticsearch.xpack.core.ml.job.results.ForecastRequestStats;
 import org.elasticsearch.xpack.core.ml.job.results.Influencer;
 import org.elasticsearch.xpack.core.ml.job.results.ModelPlot;
-import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSnapshotTests;
+//import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.ModelSnapshotTests;
 import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.Quantiles;
-import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.QuantilesTests;
+//import org.elasticsearch.xpack.core.ml.job.process.autodetect.state.QuantilesTests;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -38,8 +38,8 @@ public class AutodetectResultTests extends AbstractSerializingTestCase<Autodetec
         Bucket bucket;
         List<AnomalyRecord> records = null;
         List<Influencer> influencers = null;
-        Quantiles quantiles;
-        ModelSnapshot modelSnapshot;
+        Quantiles quantiles = null;
+        ModelSnapshot modelSnapshot = null;
         ModelSizeStats.Builder modelSizeStats;
         ModelPlot modelPlot;
         Forecast forecast;
@@ -72,7 +72,7 @@ public class AutodetectResultTests extends AbstractSerializingTestCase<Autodetec
                 influencers.add(influencer);
             }
         }
-        if (randomBoolean()) {
+        /*if (randomBoolean()) {
             quantiles = QuantilesTests.createRandomized();
         } else {
             quantiles = null;
@@ -81,7 +81,7 @@ public class AutodetectResultTests extends AbstractSerializingTestCase<Autodetec
             modelSnapshot = ModelSnapshotTests.createRandomized();
         } else {
             modelSnapshot = null;
-        }
+        }*/
         if (randomBoolean()) {
             modelSizeStats = new ModelSizeStats.Builder(jobId);
             modelSizeStats.setModelBytes(randomNonNegativeLong());

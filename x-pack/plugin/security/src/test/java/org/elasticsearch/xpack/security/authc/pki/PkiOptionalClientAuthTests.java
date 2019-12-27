@@ -14,10 +14,10 @@ import org.elasticsearch.common.network.NetworkModule;
 import org.elasticsearch.common.settings.SecureString;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.test.SecuritySettingsSource;
-import org.elasticsearch.test.SecuritySettingsSourceField;
 import org.elasticsearch.test.SecuritySingleNodeTestCase;
 import org.elasticsearch.xpack.core.security.authc.support.UsernamePasswordToken;
 import org.elasticsearch.xpack.core.ssl.SSLClientAuth;
+import org.elasticsearch.xpack.security.rest.SecuritySettingsSourceField;
 import org.junit.BeforeClass;
 
 import javax.net.ssl.SSLContext;

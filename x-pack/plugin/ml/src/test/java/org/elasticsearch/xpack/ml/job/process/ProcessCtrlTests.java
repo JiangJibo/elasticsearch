@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
-import static org.elasticsearch.xpack.core.ml.job.config.JobTests.buildJobBuilder;
+import static org.elasticsearch.xpack.ml.JobTests.buildJobBuilder;
 
 public class ProcessCtrlTests extends ESTestCase {
 
