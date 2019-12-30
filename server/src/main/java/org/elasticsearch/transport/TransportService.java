@@ -621,6 +621,7 @@ public class TransportService extends AbstractLifecycleComponent {
             }
             Supplier<ThreadContext.StoredContext> storedContextSupplier = threadPool.getThreadContext().newRestorableContext(true);
             TransportResponseHandler<T> responseHandler = new ContextRestoreResponseHandler<>(storedContextSupplier, handler);
+            // 存储 requestId >> 接收到response的handler, 或者timeoutHandler
             clientHandlers.put(requestId, new RequestHolder<>(responseHandler, connection, action, timeoutHandler));
             if (lifecycle.stoppedOrClosed()) {
                 // if we are not started the exception handling will remove the RequestHolder again and calls the handler to notify
